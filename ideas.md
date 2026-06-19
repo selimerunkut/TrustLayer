@@ -1,240 +1,363 @@
-# Hackathon Project Ideas
+# CoverPilot: Agentic P2P Travel Insurance
 
-## Constraints
+## Hackathon Scope
 
-- **Build time:** 10 hours
-- **Team:** AI coding agents
-- **Model:** GPT-5.4 mini to keep inference costs low
-- **Goal:** Build an original, demo-friendly agent-commerce product rather than another generic agent marketplace, escrow layer, or monitoring tool.
+- **Build time:** 10 hours with AI coding agents
+- **Insurance product:** Parametric flight-delay insurance
+- **Customer experience:** Conversational and designed for non-crypto-native travelers
+- **Settlement asset:** Testnet USDC
+- **Network:** Base Sepolia
+- **Agent infrastructure:** One broker agent using GPT-5.4 mini and tools
+- **Payments:** Circle Agent Wallet and x402 nanopayments
+- **Onchain component:** Minimal insurance-manager smart contract
+- **Important limitation:** This is a testnet demonstration, not legally valid insurance
 
-## Recommendation: NullProof
+## Product Definition
 
-### One-line pitch
+CoverPilot is a conversational travel-insurance broker powered by one AI agent and a Circle Agent Wallet.
 
-**A marketplace for bonded negative answers: agents are paid to search thoroughly and stake money behind claims that something could not be found within a clearly defined scope.**
+The customer does not need to know which insurance product they want. They describe their trip, concerns, and maximum budget naturally:
 
-### Example
+> “I am traveling to a distant country on a long flight. Please help make my trip safer. My maximum budget is €100.”
 
-> Are there any Berlin grants open today for a two-person climate startup?
+The broker agent asks follow-up questions, understands the trip, pays a specialist knowledge service for a recommendation, and presents one suitable flight-delay policy within the approved budget.
 
-A research agent:
+### Core promise
 
-1. Expands the question into multiple search strategies.
-2. Searches the web and relevant official domains.
-3. Publishes a coverage manifest showing queries, sources, domains, and timestamps.
-4. Issues a bounded conclusion: **“No matching grant was found within this search scope.”**
-5. Stakes a small USDC bond behind the conclusion.
-6. Opens a short challenge period during which another agent can submit a valid counterexample.
-7. Releases or transfers the bond according to the result.
+> **Describe the safety you want, not the insurance product. The agent finds, explains, and purchases suitable protection within your budget.**
 
-### Important positioning
+The MVP supports only flight-delay insurance. Health, home, and broader travel insurance are future extensions rather than working hackathon features.
 
-> **We do not prove that nothing exists. We make agents financially accountable for saying they found nothing.**
+## Customer Experience
 
-The claim must always be bounded by:
+The chat-first application allows the traveler to:
 
-- Search time
-- Sources and domains checked
-- Query variants used
-- Eligibility criteria
-- Evidence standard
+- Describe their trip naturally
+- Answer follow-up questions
+- Set and approve a maximum budget
+- Authorize a limited paid insurance search
+- Review one personalized recommendation
+- Accept or reject the policy
+- View a simple budget summary and policy status
+- Receive an automatic payout if the covered delay occurs
 
-### Why it is original
+The customer-facing experience does not mention liquidity-pool selection or other crypto implementation details.
 
-A bounded web search found many products for citation verification, AI escrow, bounties, agent marketplaces, and change monitoring. It did **not** identify a direct product centered on bonded, challengeable negative search results.
+## End-to-End Flow
 
-This is not proof that no competitor exists, but it is a stronger novelty signal than the alternatives reviewed.
+### 1. Conversational discovery
 
-### Why it fits the hackathon
+The traveler describes the trip and desired feeling of safety. The broker agent asks only for information needed to find coverage, such as:
 
-- Clearly demonstrates agent-to-agent commerce.
-- Makes trust visible through evidence, staking, and challenges.
-- Produces a dramatic live demo: one agent says “nothing found,” another tries to disprove it.
-- Uses sponsor-aligned components without needing a production-grade protocol.
-- Can be completed as a narrow vertical slice in 10 hours.
+- Destination and travel dates
+- Flight number or route
+- Number of travelers
+- Main concerns
+- Maximum budget
 
-### 10-hour MVP
+The agent summarizes the request before any funds are committed.
 
-1. **Question form** — accept a bounded negative-search question.
-2. **Research agent** — run several Tavily searches using generated query variants.
-3. **Coverage report** — show queries, domains, sources, timestamps, and exclusion rules.
-4. **Negative certificate** — GPT-5.4 mini generates a carefully bounded conclusion.
-5. **Challenge agent** — independently attempts to find a qualifying counterexample.
-6. **Resolution state machine** — `researching → bonded → challenged/uncontested → resolved`.
-7. **Payment demo** — use Circle testnet wallets or the hackathon’s OOBE escrow flow.
-8. **Public receipt** — display the claim, evidence, bond, challenge, and result on one page.
+### 2. Budget authorization
 
-### Suggested demo script
+The customer is shown a clear authorization message:
 
-1. Submit a question with an answer that is difficult to establish by absence.
-2. Show the research agent searching several query variants and official sources.
-3. Display its evidence coverage and bonded “not found” certificate.
-4. Launch the challenger agent.
-5. Resolve the bond based on whether a valid counterexample is found.
-6. Show the permanent public receipt.
+> “I can search for suitable protection within your 100 USDC budget. This search may cost up to 5 USDC, even if you do not purchase the recommended policy.”
 
-### Scores
+The customer signs a transaction transferring the approved maximum USDC budget into the Budget Escrow. The agent cannot spend more than the approved amount.
 
-| Criterion | Score |
+If the customer entered the budget in euros, the interface shows the simulated USDC equivalent before authorization.
+
+### 3. Paid insurance search
+
+The smart contract releases a dynamic research allowance equal to 1–5% of the maximum budget. The broker's Circle Agent Wallet uses that allowance to pay the mocked insurance knowledge service through x402.
+
+The payment is real on testnet and produces a receipt. The service logic and insurance catalogue are mocked.
+
+### 4. Policy recommendation
+
+After payment, the knowledge service returns one policy containing:
+
+- Policy name
+- Premium
+- Fixed payout
+- Delay trigger
+- Coverage period
+- Internal risk tier
+- Internal liquidity-pool identifier
+- Human-readable recommendation reason
+
+The agent does not invent premiums, calculate risk, or create policy terms. It explains the structured response from the knowledge service in plain language.
+
+### 5. Customer decision
+
+The agent shows only customer-relevant terms:
+
+- Recommendation
+- Price
+- Fixed payout
+- Delay trigger
+- Coverage dates
+- Important exclusions included in the mocked template
+
+It does not explain which P2P liquidity pool was selected.
+
+#### If the customer rejects the policy
+
+- The x402 research fee remains paid.
+- The unused budget is unlocked and returned.
+- The customer receives a payment receipt.
+
+#### If the customer accepts the policy
+
+- The x402 research fee remains paid.
+- The premium enters the mocked Policy Vault.
+- The remaining unused budget is unlocked and returned.
+- An onchain policy record is created.
+
+### 6. Policy lifecycle
+
+The policy is assigned internally to a mocked low-, medium-, or high-risk P2P liquidity pool.
+
+- The premium remains in the Policy Vault until the trip is resolved.
+- Simulated yield accrues for the customer.
+- The selected pool reserves mocked liquidity for the possible payout.
+- Pool selection and LP mechanics are hidden from the normal customer interface.
+
+### 7. Claim resolution
+
+A mocked flight oracle submits the flight result.
+
+- **No qualifying delay:** The premium principal goes to the selected LP pool, and simulated yield is returned to the customer.
+- **Qualifying delay:** The selected LP pool pays the fixed test-USDC benefit automatically. The premium remains earned by the pool, and simulated yield is returned to the customer.
+
+The policy ends in either `EXPIRED` or `PAID_OUT` state.
+
+## Example Financial Flow
+
+The traveler authorizes a maximum budget of **100 USDC**.
+
+| Event | Amount |
 |---|---:|
-| Originality | 9/10 |
-| 10-hour feasibility | 8/10 |
-| Demo clarity | 9/10 |
-| Sponsor alignment | 9/10 |
+| Maximum budget locked | 100 USDC |
+| x402 insurance-search fee | −3 USDC |
+| Accepted policy premium | −42 USDC |
+| Unused budget returned | +55 USDC |
+| Simulated yield returned after resolution | +0.20 USDC |
+| Claim payout if delay trigger is met | +300 USDC |
 
----
+If the traveler rejects the recommendation, only the 3 USDC research fee is deducted and 97 USDC is returned.
 
-## Alternative 2: ClaimWarranty
+## One Broker Agent
 
-### One-line pitch
+The application uses one AI agent rather than separate interview, research, wallet, and policy agents.
 
-**Agents sell individual research claims with citations, an expiry time, and a financial warranty that pays if the cited evidence does not support the claim or becomes invalid during the warranty period.**
+GPT-5.4 mini handles:
 
-### Product flow
+- Conversational trip discovery
+- Follow-up questions for missing information
+- Trip and budget confirmation
+- Knowledge-service request construction
+- Tool selection and execution
+- Recommendation explanation
+- Customer-friendly policy summary
+- Policy and payment-status queries
 
-1. A buyer requests a factual claim.
-2. A research agent returns the claim, citation, evidence excerpt, confidence, and expiry time.
-3. The agent attaches a small bond.
-4. A verifier checks citation entailment and source availability.
-5. If the claim fails the agreed test before expiry, the buyer receives the bond or refund.
+### Agent tools
 
-### Novel wedge
+The broker agent can use tools to:
 
-Generic AI escrow and refund protocols already exist. The less crowded angle is a **claim-level, time-dependent warranty** rather than a warranty for an entire agent task.
+- Check its Circle Agent Wallet balance
+- Request customer budget authorization
+- Read the approved research allowance
+- Pay the knowledge service through x402
+- Read and validate the structured recommendation
+- Record the recommendation hash
+- Submit a policy purchase or rejection
+- Read policy and payment status
 
-### Competition risk
+The broker agent cannot submit flight results or trigger claims. The mocked oracle is a separate privileged component so that the agent recommending a policy cannot approve its own payout.
 
-Adjacent products already cover parts of the idea:
+## Circle Agent Wallet
 
-- Citation verification
-- AI-output escrow
-- Agent payment disputes
-- Refundable x402 transactions
+The Circle Agent Wallet is a meaningful part of the broker's work. It is used to:
 
-It is therefore less original than NullProof, but still differentiated if the product stays focused on atomic claims and explicit validity periods.
+- Hold the broker's payment identity
+- Check balances
+- Respect the customer-authorized research allowance
+- Pay the knowledge service through x402
+- Capture the payment receipt or transaction reference
+- Explain what data was purchased and why
 
-### 10-hour MVP
+The workflow satisfies the Circle challenge requirement to go beyond a single USDC transfer by making the wallet part of a repeatable agent task.
 
-- Claim request form
-- Tavily research agent
-- Citation entailment verifier
-- Warranty duration and bond amount
-- Circle testnet payment simulation
-- Manual or automated dispute button
-- Public claim receipt
+Circle Agent Wallet provides wallets, spending controls, USDC payments, Gateway, and x402 nanopayments. No documented Circle Agent Stack product is being represented as a yield vault.
 
-### Scores
+## Mocked x402 Knowledge Service
 
-| Criterion | Score |
-|---|---:|
-| Originality | 7/10 |
-| 10-hour feasibility | 9/10 |
-| Demo clarity | 8/10 |
+The middleware exposes a paid endpoint such as:
 
----
+```text
+POST /insurance/recommend
+Price: dynamic, 1–5% of the approved customer budget
+```
 
-## Alternative 3: LeanReceipt
+The endpoint is protected by x402. After payment, it evaluates mocked rules and returns a predefined policy template.
 
-### One-line pitch
+Example response:
 
-**After an agent completes a task, competing agents can earn a bounty by reproducing the accepted result at a meaningfully lower verified cost.**
+```json
+{
+  "policyName": "Long-Haul Delay Protect",
+  "premiumUsdc": 42,
+  "payoutUsdc": 300,
+  "delayTriggerMinutes": 180,
+  "coverageStart": "2026-06-28T08:00:00Z",
+  "coverageEnd": "2026-06-29T08:00:00Z",
+  "riskTier": "LOW",
+  "poolId": "POOL-LOW-01",
+  "reason": "Long-haul flight with limited connection tolerance"
+}
+```
 
-### Product flow
+The knowledge service represents a future catalogue of insurance templates and underwriting knowledge. Its data, premiums, risk scoring, and recommendation rules are mocked for the hackathon.
 
-1. An initial agent completes a task and publishes its result, model usage, latency, and cost.
-2. A reproducibility bounty opens.
-3. Other agents attempt the same task under the same acceptance tests.
-4. A verifier checks semantic equivalence or test results.
-5. The cheapest valid reproduction wins the bounty.
-6. The winning execution becomes a reusable “lean receipt” for future routing.
+## Onchain Insurance Manager
 
-### Novel wedge
+The Onchain Insurance Manager is a minimal smart contract deployed on Base Sepolia.
 
-Agent cost dashboards and model routers already exist. The differentiated mechanism is a **competitive, post-execution savings bounty** with an auditable reproduction receipt.
+It combines the hackathon's essential onchain responsibilities:
 
-### Main risk
+- Budget escrow
+- Policy registry
+- Mock policy vault
+- Mock pool accounting
+- Policy-state transitions
+- Claim-trigger evaluation
+- Test-USDC refunds and payouts
 
-Defining objective equivalence is hard for open-ended tasks. The hackathon demo should use a testable task such as:
+### Onchain records
 
-- Structured data extraction
-- Code generation with tests
-- Classification against a fixed evaluation set
-- API workflow completion
+The contract records:
 
-### 10-hour MVP
+- Customer wallet address
+- Locked maximum budget
+- Research allowance and paid fee
+- Premium
+- Fixed payout
+- Delay threshold
+- Policy start and end times
+- Hashed flight identifier
+- Hashed recommendation or API response
+- x402 payment reference
+- Internal risk tier and pool ID
+- Policy status
+- Oracle result
+- Refund or payout transaction
 
-- Submit task and baseline result
-- Capture tokens, latency, and estimated cost
-- Run two cheaper challenger agents
-- Verify outputs against deterministic tests
-- Rank valid reproductions by cost
-- Simulate payout and publish the winning receipt
+### Offchain information
 
-### Scores
+The following remains offchain:
 
-| Criterion | Score |
-|---|---:|
-| Originality | 8/10 |
-| 10-hour feasibility | 7/10 |
-| Demo clarity | 8/10 |
+- Customer name and identity
+- Passport or booking information
+- Full conversation history
+- Raw knowledge-service response
+- Other unnecessary personal travel information
 
----
+Hashes can be stored onchain to prove that offchain records were not changed after the policy was created.
 
-## Ideas to Avoid
+## Mocked Policy Vault and P2P Pools
 
-The following categories appear crowded and would likely look derivative unless given a much narrower mechanism:
+The system models three P2P liquidity pools:
 
-1. **Generic agent marketplace** — many platforms already list, hire, or transact with agents.
-2. **Human fallback for failed agents** — multiple services already let agents hire humans or post rescue tasks.
-3. **Generic bounty platform** — bounty-based agent work is already represented by several products.
-4. **Website or policy-change monitor** — Visualping and numerous specialized alternatives already cover this well.
-5. **Generic AI escrow/refund protocol** — KAMIYO, Basilisk, x402r, and others already pursue this category.
-6. **Wallet or reputation dashboard** — useful, but common and unlikely to stand out as the core hackathon idea.
+| Pool | Insurance risk | Simulated LP return |
+|---|---|---|
+| Low-risk pool | Lower expected claim probability | Lower return |
+| Medium-risk pool | Moderate expected claim probability | Medium return |
+| High-risk pool | Higher expected claim probability | Higher return |
 
-## Competitive Research Summary
+The knowledge service selects the pool as part of its mocked underwriting response. The customer does not select or see the pool.
 
-### Crowded: agent marketplaces and rescue networks
+The pool economics, LP deposits, capital requirements, and yield calculations are mocked. For demonstration purposes, a funded testnet pool wallet may still execute a real test-USDC claim payout.
 
-Examples found include eAgent, HiredByAgents, BotBounty, RoboRent, OIXA, Merxex, Hunazo, AgentPact, BotHire, Basilisk, and Cruxis.
+## Mock Flight Oracle
 
-### Crowded: website and policy-change monitoring
+A privileged admin or demo endpoint submits:
 
-Examples include Visualping, OnChange, DeltaWatch, PageCrawl, RegWatch, and PolicyDiff.
+- Hashed flight identifier
+- Arrival status
+- Delay duration
+- Observation timestamp
 
-### Crowded: generic escrow and output guarantees
+The smart contract compares the submitted delay with the policy trigger and releases the payout when the condition is met.
 
-Examples include KAMIYO, Basilisk, and x402r escrow.
+The external flight-data source and oracle network are mocked. The separation between the broker agent and oracle is real in the application architecture.
 
-### Partially crowded: citation verification and agent-cost optimization
+## Customer Receipt
 
-SemanticCite validates citations, while products such as Dirr, AgentSpend, and Calibrait address agent costs, comparison, or routing. These are adjacent to ClaimWarranty and LeanReceipt but do not appear to implement their exact market mechanisms.
+The customer-facing term is **Budget Summary** or **Payment Receipt**, not “complete spending ledger.”
 
-### Least crowded in this review
+It shows:
 
-Exact and adjacent searches for products described as “proof of absence,” “negative answer certificate,” “bonded negative answer,” or a challenge market for negative web-search claims did not identify a direct equivalent to NullProof.
+- Maximum budget authorized
+- Insurance-search fee paid
+- Policy premium, if purchased
+- Unused amount returned
+- Simulated yield returned
+- Claim payout, if triggered
 
-**Caution:** Search results can only establish bounded evidence of novelty, not prove that no similar product exists.
+Transaction hashes and raw onchain details are available only in an optional technical-details view. This preserves a non-crypto-native experience while satisfying the hackathon requirement for receipts and payment logs.
 
-## Technical Feasibility Sources
+## Real vs. Mocked
 
-- [Circle developer-controlled wallet quickstart](https://developers.circle.com/wallets/dev-controlled/create-your-first-wallet)
-- [Circle Wallets documentation](https://developers.circle.com/wallets)
-- [Tavily CLI documentation](https://docs.tavily.com/documentation/tavily-cli)
-- [x402 FAQ](https://docs.x402.org/faq)
-- [x402r escrow scheme](https://docs.x402r.org/x402-integration/escrow-scheme)
+### Real
 
-## Adjacent Products and Research
+- Conversational AI experience
+- One tool-using broker agent
+- Circle Agent Wallet
+- x402 knowledge-service payment
+- Testnet USDC movements
+- Base Sepolia smart contract
+- Onchain policy record
+- Customer budget receipt
+- Automatic claim transaction after oracle submission
 
-- [SemanticCite: LLM-Based Citation Verification](https://arxiv.org/abs/2511.16198)
-- [Token Cost of Agentic Intelligence](https://arxiv.org/abs/2604.22750)
-- [KAMIYO Protocol](https://protocol.kamiyo.ai/)
-- [Basilisk](https://www.basilisk.exchange/)
-- [Dirr](https://dirr.ai/)
-- [AgentSpend](https://agentspend.org/)
-- [Calibrait](https://calibrait.ai/)
+### Mocked
+
+- Insurance catalogue
+- Underwriting and premium calculation
+- Risk scoring and pool selection
+- P2P pool economics
+- LP deposits and returns
+- Policy-vault yield
+- Flight-data source and oracle network
+- Regulated underwriting and compliance
+- Legally binding policy issuance
+
+## Legal and Product Disclaimer
+
+Real insurance must normally be issued by an authorized insurer and comply with applicable insurance, consumer-protection, privacy, and financial regulations. CoverPilot does not provide legally valid coverage.
+
+The interface must display:
+
+> **Demo policy using testnet funds. This is not real insurance coverage.**
+
+## Demo Story
+
+1. A traveler asks for help making a long-distance trip safer with a 100 USDC budget.
+2. The broker asks conversational follow-up questions.
+3. The traveler approves the budget and maximum research fee.
+4. The broker's Circle Agent Wallet pays the knowledge service through x402.
+5. The UI displays the x402 receipt and explains why the data was purchased.
+6. The broker presents one flight-delay recommendation.
+7. The traveler purchases the policy.
+8. The smart contract returns the unused budget and records the policy.
+9. The demo oracle submits a delay longer than the policy trigger.
+10. The selected mocked pool sends a real test-USDC payout.
+11. The traveler sees the updated policy status and simple budget summary.
 
 ## Final Decision
 
-Build **NullProof**.
+Build **CoverPilot** as a narrow, conversational flight-delay insurance demonstration.
 
-It has the best combination of novelty, sponsor alignment, visible agent-to-agent interaction, and a memorable 10-hour demo. Keep the product narrowly focused on one bounded question type rather than attempting a general research marketplace.
+The strongest hackathon story is not merely “insurance onchain.” It is that one AI broker manages a customer-approved budget, purchases specialist insurance knowledge through x402, recommends suitable protection, creates an auditable onchain policy, and completes an automatic test-USDC claim workflow.
