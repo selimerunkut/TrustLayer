@@ -2,7 +2,6 @@
 
 ## Hackathon Scope
 
-- **Build time:** 10 hours with AI coding agents
 - **Insurance product:** Parametric flight-delay insurance
 - **Customer experience:** Conversational and designed for non-crypto-native travelers
 - **Frontend:** Streamlit chat application
@@ -38,7 +37,7 @@ These skills guide the coding agents building CoverPilot; they are not runtime t
 
 ### Why LangChain instead of LangGraph or Deep Agents
 
-CoverPilot has one fixed-purpose agent with a small tool set, so LangChain `create_agent` is the simplest fit for the 10-hour MVP. Budget limits, purchase approval, contract writes, and claim resolution remain deterministic application or smart-contract operations rather than model-controlled workflow steps.
+CoverPilot has one fixed-purpose agent with a small tool set, so LangChain `create_agent` is the simplest fit for the MVP. Budget limits, purchase approval, contract writes, and claim resolution remain deterministic application or smart-contract operations rather than model-controlled workflow steps.
 
 LangGraph persistence and interrupt/resume flows would become useful if a later version must recover long-running policy workflows across sessions. Deep Agents would add planning, filesystem, memory, and subagent capabilities that this narrow broker does not need.
 
