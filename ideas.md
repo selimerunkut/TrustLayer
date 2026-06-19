@@ -5,12 +5,65 @@
 - **Build time:** 10 hours with AI coding agents
 - **Insurance product:** Parametric flight-delay insurance
 - **Customer experience:** Conversational and designed for non-crypto-native travelers
+- **Frontend:** Streamlit chat application
+- **Backend:** FastAPI service
 - **Settlement asset:** Testnet USDC
 - **Network:** Base Sepolia
-- **Agent infrastructure:** One broker agent using GPT-5.4 mini and tools
+- **Agent infrastructure:** One LangChain broker agent using GPT-5.4 mini and tools
 - **Payments:** Circle Agent Wallet and x402 nanopayments
 - **Onchain component:** Minimal insurance-manager smart contract
 - **Important limitation:** This is a testnet demonstration, not legally valid insurance
+
+## Technology Stack
+
+| Layer | Choice | MVP responsibility |
+|---|---|---|
+| Frontend | Streamlit | Chat, budget approval, recommendation review, policy status, and payment receipt |
+| Backend | FastAPI | Agent endpoint, validation, mocked knowledge service, policy actions, and demo-oracle endpoint |
+| Agent framework | LangChain 1.x `create_agent` | One GPT-5.4 mini broker with a small fixed tool set and structured responses |
+| Data validation | Pydantic | Validate trip details, policy recommendations, money amounts, and tool results |
+| Agent wallet | Circle Agent Wallet | Broker balance checks, controlled USDC spending, x402 payment, and payment receipts |
+| Blockchain | Base Sepolia | Test-USDC escrow, policy records, refunds, and claim payouts |
+| Smart contract | Solidity insurance manager | Deterministic custody, policy state transitions, and payout rules |
+| Mock services | FastAPI routes | Insurance knowledge catalogue, underwriting rules, and flight-oracle input |
+
+The application uses the locally installed `.agents/skills/` LangChain guidance during development. The most relevant skills are:
+
+- `ecosystem-primer`
+- `langchain-dependencies`
+- `langchain-fundamentals`
+- `langchain-middleware`
+
+These skills guide the coding agents building CoverPilot; they are not runtime tools exposed to the customer-facing broker. At runtime, the broker receives only explicitly implemented and validated Python tools from the FastAPI application.
+
+### Why LangChain instead of LangGraph or Deep Agents
+
+CoverPilot has one fixed-purpose agent with a small tool set, so LangChain `create_agent` is the simplest fit for the 10-hour MVP. Budget limits, purchase approval, contract writes, and claim resolution remain deterministic application or smart-contract operations rather than model-controlled workflow steps.
+
+LangGraph persistence and interrupt/resume flows would become useful if a later version must recover long-running policy workflows across sessions. Deep Agents would add planning, filesystem, memory, and subagent capabilities that this narrow broker does not need.
+
+## Component Flow
+
+```text
+Traveler
+   |
+   v
+Streamlit chat and policy UI
+   |
+   v
+FastAPI application
+   |
+   +--> LangChain broker agent (GPT-5.4 mini)
+   |       |
+   |       +--> validated broker tools
+   |               +--> Circle Agent Wallet and x402
+   |               +--> mocked insurance knowledge service
+   |               +--> Base Sepolia insurance manager
+   |
+   +--> privileged mock-oracle endpoint --> Base Sepolia insurance manager
+```
+
+Streamlit owns presentation and conversational session state. FastAPI owns authentication boundaries, validation, idempotency, agent execution, and service integration. The smart contract owns funds and final policy state. The language model never directly constructs arbitrary transactions or decides whether a claim is valid.
 
 ## Product Definition
 
@@ -147,9 +200,9 @@ The traveler authorizes a maximum budget of **100 USDC**.
 
 If the traveler rejects the recommendation, only the 3 USDC research fee is deducted and 97 USDC is returned.
 
-## One Broker Agent
+## One LangChain Broker Agent
 
-The application uses one AI agent rather than separate interview, research, wallet, and policy agents.
+The application uses one LangChain `create_agent` broker rather than separate interview, research, wallet, and policy agents.
 
 GPT-5.4 mini handles:
 
@@ -164,16 +217,18 @@ GPT-5.4 mini handles:
 
 ### Agent tools
 
-The broker agent can use tools to:
+The broker receives a small, explicit set of FastAPI-backed Python tools:
 
-- Check its Circle Agent Wallet balance
-- Request customer budget authorization
-- Read the approved research allowance
-- Pay the knowledge service through x402
-- Read and validate the structured recommendation
-- Record the recommendation hash
-- Submit a policy purchase or rejection
-- Read policy and payment status
+- `get_wallet_balance()`
+- `prepare_budget_authorization(max_budget_usdc)`
+- `get_research_allowance(policy_draft_id)`
+- `pay_knowledge_service(policy_draft_id)`
+- `get_policy_recommendation(policy_draft_id, trip_details)`
+- `purchase_policy(policy_draft_id)`
+- `reject_policy(policy_draft_id)`
+- `get_policy_status(policy_id)`
+
+Tool inputs and outputs use Pydantic schemas. FastAPI checks authorization, amount limits, current policy state, duplicate requests, and contract results before returning data to the model. The model may choose an appropriate tool and explain its result, but it cannot override these checks.
 
 The broker agent cannot submit flight results or trigger claims. The mocked oracle is a separate privileged component so that the agent recommending a policy cannot approve its own payout.
 
@@ -191,6 +246,15 @@ The Circle Agent Wallet is a meaningful part of the broker's work. It is used to
 The workflow satisfies the Circle challenge requirement to go beyond a single USDC transfer by making the wallet part of a repeatable agent task.
 
 Circle Agent Wallet provides wallets, spending controls, USDC payments, Gateway, and x402 nanopayments. No documented Circle Agent Stack product is being represented as a yield vault.
+
+### Alignment with the Circle Agent Wallet brief
+
+- The agent performs meaningful wallet actions: balance checks and a paid x402 service request.
+- The wallet operates inside a customer-authorized research allowance.
+- The payment buys a specific insurance recommendation and produces a receipt or transaction reference.
+- The UI explains what the agent purchased, why it purchased it, and how much it spent.
+- The same wallet-as-a-job workflow can be repeated for another traveler.
+- The implementation should begin from Circle's LangChain-compatible Agent Stack starter material described in `Circle Agent Wallet.pdf` rather than creating an unrelated wallet abstraction.
 
 ## Mocked x402 Knowledge Service
 
@@ -220,6 +284,31 @@ Example response:
 ```
 
 The knowledge service represents a future catalogue of insurance templates and underwriting knowledge. Its data, premiums, risk scoring, and recommendation rules are mocked for the hackathon.
+
+## FastAPI Boundary
+
+The MVP can be implemented with a small API surface:
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /chat` | Run one conversational turn and return agent messages or an approval request |
+| `POST /budget/authorize` | Validate the approved cap and prepare or record the escrow transaction |
+| `POST /insurance/recommend` | x402-protected mocked knowledge-service response |
+| `POST /policy/purchase` | Validate approval and submit the policy purchase |
+| `POST /policy/reject` | Deduct the paid research fee and unlock the remaining budget |
+| `GET /policy/{policy_id}` | Return policy, payment, and claim status for the UI |
+| `POST /oracle/resolve` | Privileged demo-only flight result submission |
+
+For the hackathon, these routes may live in one FastAPI project while preserving logical boundaries between the broker API, paid knowledge service, and privileged oracle. Money-changing routes require idempotency keys so a Streamlit rerun or repeated agent tool call cannot duplicate a payment or contract write.
+
+### Responsibility boundary
+
+- **GPT-5.4 mini:** asks questions, normalizes the trip request, chooses approved tools, and explains verified results.
+- **LangChain:** binds the tool set, manages the agent turn, and returns structured output.
+- **FastAPI:** validates schemas and permissions, calculates the 1–5% research fee from deterministic mocked rules, enforces idempotency, and coordinates integrations.
+- **Circle Agent Wallet:** pays the x402-protected service and returns payment evidence.
+- **Smart contract:** escrows USDC and enforces policy, refund, and payout state transitions.
+- **Mock oracle:** submits flight outcomes through a privileged route; it is not an agent tool.
 
 ## Onchain Insurance Manager
 
