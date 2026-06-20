@@ -18,8 +18,9 @@ def test_voice_embed_template_exists():
     assert "/api/betty/voice-chat" in text
 
 
-def test_voice_chat_returns_503_without_openai_key(monkeypatch):
+def test_voice_chat_returns_503_without_llm_keys(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("NEBIUS_API_KEY", raising=False)
     r = client.post(
         "/api/betty/voice-chat",
         json={
