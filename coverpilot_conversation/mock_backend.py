@@ -43,6 +43,11 @@ class MockBrokerBackend:
     drafts: dict[str, PolicyDraft] = field(default_factory=dict)
     #: When `lookup_customer_profile` is called with an empty hint, resolve this CRM id (demo: Vasiliy).
     session_customer_id: str = "vasiliy"
+    #: Set true after successful `policy_research` (ideas.md: KB before budget lock).
+    policy_research_completed: bool = False
+
+    def mark_policy_research_done(self) -> None:
+        self.policy_research_completed = True
 
     def _require_draft(self, draft_id: str) -> PolicyDraft:
         d = self.drafts.get(draft_id)
@@ -59,6 +64,12 @@ class MockBrokerBackend:
             raise ValueError("max_budget_usdc must be positive")
         if not trip_summary.strip():
             raise ValueError("trip_summary must be non-empty")
+        if not self.policy_research_completed:
+            raise ValueError(
+                "TrustLayer workflow (ideas.md): call policy_research(trip_digest) first with the full trip "
+                "(airlines, EU legs, layovers, destinations, fears) so KB `flight_attributes.md` is consulted "
+                "before prepare_budget_authorization."
+            )
         draft_id = f"draft-{uuid.uuid4().hex[:10]}"
         fee = self.research_allowance_usdc(max_budget_usdc)
         d = PolicyDraft(
@@ -120,13 +131,18 @@ class MockBrokerBackend:
         premium = max(10.0, min(d.max_budget_usdc * 0.42, d.max_budget_usdc - d.research_fee_usdc))
         payout = 300.0 if d.max_budget_usdc >= 80 else 150.0
         rec = {
-            "policyName": "Long-Haul Delay Protect (demo)",
+            "policyName": "TrustLayer Flight Bundle (delay + cancellation)",
             "premiumUsdc": round(premium, 2),
             "payoutUsdc": payout,
             "delayTriggerMinutes": 180,
+            "cancellationBenefitUsdc": round(min(200.0, payout * 0.5), 2),
+            "coveredRisks": ["flight_delay", "flight_cancellation", "significant_disruption"],
             "riskTier": "LOW",
             "poolId": "POOL-LOW-01",
-            "reason": "Mock underwriting: long-haul delay cover within authorized budget.",
+            "reason": (
+                "Multi-peril flight bundle within authorized budget: delay cash benefit after trigger, "
+                "cancellation benefit as listed, plus disruption guidance per TrustLayer mock catalogue."
+            ),
             "tripDetailsEcho": trip_details.strip()[:500],
         }
         d.recommendation = rec
@@ -182,6 +198,7 @@ class MockBrokerBackend:
         return json.dumps(
             {
                 "session_customer_id": self.session_customer_id,
+                "policy_research_completed": self.policy_research_completed,
                 "broker_wallet_usdc": self.broker_wallet_usdc,
                 "drafts": {k: {"status": v.status.value, "max": v.max_budget_usdc} for k, v in self.drafts.items()},
             },

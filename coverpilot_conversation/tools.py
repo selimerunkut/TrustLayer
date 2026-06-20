@@ -22,20 +22,43 @@ def build_broker_tools(backend: MockBrokerBackend) -> list:
 
     @tool
     def lookup_customer_profile(name_email_or_handle: str) -> str:
-        """Look up a returning customer in TrustLayer CRM (read-only, demo).
+        """TrustLayer CRM: resolve the traveler before asking for identity.
 
-        Call this early when the user states travel intent, greets, or shares their name.
-        Pass an empty string to resolve the **session default** customer (Streamlit demo:
-        recurring customer Vasiliy unless the session CRM id was changed in the sidebar).
+        **Call with empty string `""` immediately** when the user states trip or flight
+        insurance intent but has not given a name—this loads the **session / kiosk**
+        customer (e.g. returning Vasiliy). Do not ask for name or email first.
+
+        If they gave a name, email, or handle in their message, pass that string instead.
 
         Args:
-            name_email_or_handle: Customer name, email, or handle; use "" for session default.
+            name_email_or_handle: Customer identifier, or "" for session default.
         """
         out = resolve_customer(
             name_email_or_handle,
             session_default_customer_id=backend.session_customer_id,
         )
         return json.dumps(out)
+
+    @tool
+    def policy_research(trip_digest: str) -> str:
+        """TrustLayer internal KB consult before any budget lock (ideas.md journey).
+
+        Run after you have enough trip detail (airlines, EU vs long-haul legs, layovers, destinations,
+        delay/cancellation fears). Loads static ``KB/flight_attributes.md`` and returns excerpts,
+        ``mock_subtool_trace`` (mocked pipeline steps), and narration hints. **Mandatory** before
+        ``prepare_budget_authorization``—the backend rejects budget prep without this.
+
+        Ground EU261 / South-America / connection explanations in the returned ``excerpts`` and
+        ``verbatim_kb_quotes`` only; do not invent regulation.
+
+        Args:
+            trip_digest: Full trip narrative in one string (e.g. Ryanair to London, 3h layover, onward to Bogotá).
+        """
+        from coverpilot_conversation.kb_policy_research import run_policy_research
+
+        payload = run_policy_research(trip_digest)
+        backend.mark_policy_research_done()
+        return json.dumps(payload, ensure_ascii=False)
 
     @tool
     def get_wallet_balance() -> str:
@@ -47,14 +70,15 @@ def build_broker_tools(backend: MockBrokerBackend) -> list:
 
     @tool
     def prepare_budget_authorization(max_budget_usdc: float, trip_summary: str) -> str:
-        """Create a policy draft and compute the demo research fee (1–5% of budget cap).
+        """Create a policy draft and compute the research fee from the approved budget bands.
 
         Call this after you have a clear trip summary and a numeric max budget in USDC.
         This does NOT spend funds yet. Next step is `confirm_budget_authorization`.
 
         Args:
             max_budget_usdc: Customer's maximum spend cap in USDC for this quote flow.
-            trip_summary: Short plain-language summary of destination, dates, flight/route, travelers, concerns.
+            trip_summary: Short plain-language summary of destination, dates, flight/route, travelers, concerns
+                (delays, cancellations, disruptions, etc.).
         """
         d = backend.prepare_budget_authorization(max_budget_usdc, trip_summary)
         return json.dumps(
@@ -63,7 +87,7 @@ def build_broker_tools(backend: MockBrokerBackend) -> list:
                 "max_budget_usdc": d.max_budget_usdc,
                 "research_allowance_usdc": d.research_fee_usdc,
                 "trip_summary": d.trip_summary,
-                "next_step": "Ask the traveler to confirm demo terms, then call confirm_budget_authorization.",
+                "next_step": "Ask the traveler to confirm the fee disclosure, then call confirm_budget_authorization.",
             }
         )
 
@@ -106,9 +130,10 @@ def build_broker_tools(backend: MockBrokerBackend) -> list:
 
     @tool
     def get_policy_recommendation(policy_draft_id: str, trip_details: str) -> str:
-        """Fetch the structured flight-delay recommendation after research is paid.
+        """Fetch the structured TrustLayer flight recommendation after research is paid.
 
-        The model must NOT invent premiums; this tool returns fixed mock numbers from the backend.
+        Returns delay, cancellation, and bundled risk fields from the mock catalogue.
+        The model must NOT invent premiums or benefits; explain exactly what the JSON contains.
 
         Args:
             policy_draft_id: Draft id with research already paid.
@@ -149,6 +174,7 @@ def build_broker_tools(backend: MockBrokerBackend) -> list:
 
     return [
         lookup_customer_profile,
+        policy_research,
         get_wallet_balance,
         prepare_budget_authorization,
         confirm_budget_authorization,

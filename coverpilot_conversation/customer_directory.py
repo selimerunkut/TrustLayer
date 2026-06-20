@@ -38,12 +38,12 @@ _register(
         preferred_name="Vasiliy",
         is_recurring=True,
         typically_travels_solo=True,
-        usual_coverage_budget_usdc=40.0,
-        usual_budget_description="Often allocates around 40 USD for travel protection (demo: treat as ~40 USDC).",
-        common_concerns=("flight delays", "cancellation worry"),
+        usual_coverage_budget_usdc=45.0,
+        usual_budget_description="Often uses about 45 USD for flight protection; treat as ~45 USDC when quoting.",
+        common_concerns=("flight delays", "cancellation", "disruptions"),
         product_notes_for_broker=(
-            "They often worry about cancellation; our demo product is delay-only—acknowledge "
-            "the concern, then steer to delay coverage or decline."
+            "Prefers broad flight protection (delays and cancellations). Offer the usual ~45 USDC cap "
+            "then confirm trip details before tools."
         ),
     ),
     "vasiliy klyosov",
@@ -89,6 +89,38 @@ def resolve_customer(identifier: str | None, *, session_default_customer_id: str
     }
 
 
+_TRAVEL_PLANNING_HINT = re.compile(
+    r"\b(travel|travell?ing|trip|flights?|flight|fly(ing)?|insur(ance|e)?|protect(ion)?|coverage|"
+    r"delay|disrupt|cancellation|cancel(l(ed|ation)?)?|abroad|destination|itinerary|booking|"
+    r"south america|north america|latin america|colombia|brazil|peru|europe|asia|africa|insure)\b",
+    re.I,
+)
+
+
+def user_message_suggests_travel_planning(text: str) -> bool:
+    """True when the traveler is asking about trips / flight protection (not a pure greeting)."""
+    return bool(_TRAVEL_PLANNING_HINT.search(text or ""))
+
+
+def session_crm_context_block(*, session_default_customer_id: str) -> str | None:
+    """Authoritative CRM paragraph for the session customer (injected by the UI shell before the model runs)."""
+    r = resolve_customer("", session_default_customer_id=session_default_customer_id)
+    if not r.get("matched"):
+        return None
+    solo = "they usually travel solo" if r.get("typically_travels_solo") else "travel party size varies"
+    name = r["preferred_name"]
+    budget = float(r["usual_coverage_budget_usdc"])
+    extra = str(r.get("usual_budget_description", "")).strip()
+    return (
+        "[TrustLayer kiosk — verified session CRM; authoritative for this chat]\n"
+        f"Returning customer **{name}** ({solo}). "
+        f"Typical flight-protection budget with us: **~{budget:.0f} USDC**. "
+        f"{extra}\n"
+        "You must greet them by first name and recall these preferences in your opening sentence for this reply. "
+        "Do **not** ask for name or email to find their file."
+    )
+
+
 def _profile_to_dict(p: CustomerProfile) -> dict[str, Any]:
     return {
         "matched": True,
@@ -102,6 +134,6 @@ def _profile_to_dict(p: CustomerProfile) -> dict[str, Any]:
         "product_notes_for_broker": p.product_notes_for_broker,
         "personalization_hint": (
             f"If they have not stated a budget yet, offer their usual ~{p.usual_coverage_budget_usdc:g} USDC "
-            f"for delay coverage and ask for a quick yes/no."
+            "for flight protection and ask for a quick yes/no."
         ),
     }

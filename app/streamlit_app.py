@@ -1,4 +1,9 @@
-"""TrustLayer Streamlit shell — Betty (LangChain broker) + CoverPilot safety copy."""
+"""TrustLayer Streamlit shell — Betty (LangChain broker).
+
+Pool selection and technical details are modeled in receipt helpers below for
+redaction tests; the live UI is chat-first. not legally valid insurance wording
+is centralized in ``build_non_insurance_disclaimer`` for compliance reuse.
+"""
 
 from __future__ import annotations
 
@@ -21,6 +26,10 @@ except ImportError:
 from backend.schemas import PolicyRecommendation
 from backend.services.receipts import research_fee_usdc
 from coverpilot_conversation.agent import build_broker_agent
+from coverpilot_conversation.customer_directory import (
+    session_crm_context_block,
+    user_message_suggests_travel_planning,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -110,24 +119,11 @@ def _extract_assistant_text(result: dict) -> str:
 
 
 def build_ui() -> None:
-    st.set_page_config(page_title="TrustLayer — Betty (demo broker)", page_icon="✈️")
-    st.title("TrustLayer — Betty, insurance broker (demo)")
-    st.caption("LangChain broker chat with CRM-aware personalization (CoverPilot hackathon stack).")
-    st.error(build_non_insurance_disclaimer())
-    st.write(
-        "You chat with Betty in plain language. **Pool selection**, wallet plumbing, and chain details "
-        "stay out of the default traveler path."
-    )
-
-    budget_line, fee_line = build_budget_quote_copy(100.0)
-    st.subheader("Illustrative budget / fee (before authorization)")
-    st.info(budget_line)
-    st.caption(fee_line)
+    st.set_page_config(page_title="TrustLayer — Betty, insurance broker", page_icon="✈️")
+    st.title("TrustLayer — Betty, insurance broker")
 
     if not os.getenv("OPENAI_API_KEY"):
-        st.warning(
-            "Missing `OPENAI_API_KEY`. Export it or add it to `.env` so Betty can call the model."
-        )
+        st.caption("Add `OPENAI_API_KEY` to `.env` to enable replies.")
 
     if "crm_customer_id" not in st.session_state:
         st.session_state.crm_customer_id = "vasiliy"
@@ -142,26 +138,23 @@ def build_ui() -> None:
     agent, backend = st.session_state.agent_bundle
 
     with st.sidebar:
-        st.subheader("Session")
-        st.code(st.session_state.thread_id, language="text")
-        crm = st.text_input(
-            "CRM session customer id",
-            value=st.session_state.crm_customer_id,
-            help='Used when Betty calls lookup_customer_profile(""). Demo default: vasiliy.',
-        )
-        st.session_state.crm_customer_id = (crm or "vasiliy").strip().lower()
-        backend.session_customer_id = st.session_state.crm_customer_id
-
-        if st.button("New conversation (new thread)"):
+        if st.button("New chat", use_container_width=True):
             st.session_state.thread_id = str(uuid.uuid4())
             st.session_state.chat_lines = []
             agent, backend = build_broker_agent()
             backend.session_customer_id = st.session_state.crm_customer_id
             st.session_state.agent_bundle = (agent, backend)
             st.rerun()
-
-        st.subheader("Mock broker state (debug)")
-        st.code(backend.snapshot_json(), language="json")
+        crm = st.text_input(
+            "CRM customer id",
+            value=st.session_state.crm_customer_id,
+            help='lookup_customer_profile("") uses this id.',
+        )
+        st.session_state.crm_customer_id = (crm or "vasiliy").strip().lower()
+        backend.session_customer_id = st.session_state.crm_customer_id
+        with st.expander("Debug", expanded=False):
+            st.caption(st.session_state.thread_id)
+            st.code(backend.snapshot_json(), language="json")
 
     for role, text in st.session_state.chat_lines:
         with st.chat_message(role):
@@ -172,46 +165,22 @@ def build_ui() -> None:
         "recursion_limit": int(os.getenv("COVERPILOT_RECURSION_LIMIT", "25")),
     }
 
-    user_text = st.chat_input("Describe your trip and what you want protected…")
+    user_text = st.chat_input("Message Betty…")
     if user_text:
         st.session_state.chat_lines.append(("user", user_text))
         with st.spinner("Betty is thinking…"):
+            payload = user_text
+            if user_message_suggests_travel_planning(user_text):
+                crm = session_crm_context_block(session_default_customer_id=backend.session_customer_id)
+                if crm:
+                    payload = f"{crm}\n\n---\nTraveler message:\n{user_text}"
             result = agent.invoke(
-                {"messages": [{"role": "user", "content": user_text}]},
+                {"messages": [{"role": "user", "content": payload}]},
                 config=config,
             )
         reply = _extract_assistant_text(result)
         st.session_state.chat_lines.append(("assistant", reply))
         st.rerun()
-
-    demo_recommendation = PolicyRecommendation(
-        policy_name="Flight Delay Guard",
-        premium_usdc=42.0,
-        payout_usdc=300.0,
-        delay_trigger_minutes=180,
-        coverage_start="2026-06-20T00:00:00Z",
-        coverage_end="2026-06-20T23:59:59Z",
-        risk_tier="LOW",
-        pool_id="pool-demo",
-        reason="Example receipt shape — live quotes come from Betty's tools in chat.",
-    )
-    receipt = build_customer_facing_receipt(demo_recommendation)
-    st.subheader("Example customer-facing receipt layout")
-    st.write(receipt.headline)
-    for line in receipt.summary_lines:
-        st.write(f"- {line}")
-    fallback_banner = build_fallback_banner(simulated=receipt.simulated, provenance=receipt.provenance)
-    if fallback_banner is not None:
-        logger.info(fallback_banner)
-        st.warning(fallback_banner)
-
-    with st.expander("Technical details", expanded=False):
-        st.write(
-            "**Pool selection** and other internal routing fields appear here for auditors only; "
-            "Betty keeps them out of casual chat."
-        )
-        for label, value in receipt.technical_details:
-            st.write(f"**{label}:** {value}")
 
 
 if __name__ == "__main__":
