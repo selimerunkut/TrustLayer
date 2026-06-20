@@ -1,3 +1,4 @@
 app
 backend
+contracts
 coverpilot_conversation

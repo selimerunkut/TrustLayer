@@ -390,6 +390,24 @@ South American Departures:
 
 ---
 
+## Pricing Bands by Risk Tier
+
+These bands guide broker narration of *why* a premium is priced at its level.
+Actual premium is always returned by the knowledge service.
+
+| Risk Tier | Route Profile | Typical Premium (% of authorized budget) | Delay Trigger |
+|-----------|--------------|------------------------------------------|---------------|
+| LOW | EU-departing long-haul, reliable EU carrier (e.g. Lufthansa FRA→BOG) | 35–45% | 3 hours |
+| MEDIUM | Colombia-departing long-haul, RAC 3 only (e.g. Avianca BOG→FRA) | 40–50% | 3 hours |
+| HIGH | Multi-hop with short connection (<90 min) or off-schedule carrier | 45–55% | 2 hours |
+
+Notes:
+- EU-departing routes are LOW tier because EU261 already provides €300–€600 mandatory compensation; insurance fills gaps EU261 does not cover (cancellations by extraordinary circumstances, rebooking costs).
+- Colombia-departing routes are MEDIUM–HIGH tier because RAC 3 provides limited cash compensation (30% of segment fare, airline fault only) and no EU-style fixed bracket.
+- Short layovers (under 90 minutes on international connections) add a separate rebooking-cost bucket regardless of departure jurisdiction.
+
+---
+
 ## Coverage Categories
 
 ### Delay Coverage

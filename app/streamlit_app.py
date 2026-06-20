@@ -182,6 +182,11 @@ def _run_betty_turn(
                 msgs[-1] = HumanMessage(
                     content=f"{crm}\n\n---\nTraveler message:\n{user_text}",
                 )
+        draft_hint = backend.active_draft_context_block()
+        if draft_hint:
+            msgs[-1] = HumanMessage(
+                content=f"{draft_hint}\n\n---\n{msgs[-1].content}",
+            )
         result = agent.invoke({"messages": msgs}, config=config)
     reply = format_assistant_reply_for_display(extract_last_ai_text(result))
     audio = _maybe_synthesize_reply_audio(reply, voice_mode=voice_mode)

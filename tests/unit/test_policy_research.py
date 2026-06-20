@@ -1,7 +1,7 @@
 import pytest
 
 from coverpilot_conversation.kb_policy_research import run_policy_research
-from coverpilot_conversation.mock_backend import MockBrokerBackend
+from coverpilot_conversation.mock_backend import DraftStatus, MockBrokerBackend
 
 
 def test_prepare_budget_requires_policy_research_first():
@@ -11,6 +11,18 @@ def test_prepare_budget_requires_policy_research_first():
     b.mark_policy_research_done()
     d = b.prepare_budget_authorization(100.0, "Berlin to Bogotá via London")
     assert d.draft_id.startswith("draft-")
+
+
+def test_pay_knowledge_authorizes_when_draft_still_budget_prepared():
+    """LLM sometimes skips confirm_budget_authorization; payment after explicit fee consent coalesces."""
+    b = MockBrokerBackend()
+    b.mark_policy_research_done()
+    d = b.prepare_budget_authorization(45.0, "Sofia–Frankfurt–Santiago")
+    assert d.status == DraftStatus.BUDGET_PREPARED
+    receipt = b.pay_knowledge_service(d.draft_id)
+    assert d.status == DraftStatus.RESEARCH_PAID
+    assert receipt["paid_usdc"] == d.research_fee_usdc
+    assert receipt["x402_receipt"]
 
 
 def test_policy_research_returns_kb_shape():
