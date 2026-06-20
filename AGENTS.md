@@ -35,6 +35,12 @@ short, current, and biased toward things future agents are likely to forget.
   - `circle wallet login --request <request-id> --otp <code>`
   - `circle wallet list --type agent --chain BASE`
   - `circle wallet create --type agent`
+- Live-testnet learnings:
+  - `circle services pay` needs an on-chain agent wallet first; a zero-value Base Sepolia self-transfer successfully deployed the wallet before signing.
+  - The funded Base Sepolia agent wallet currently used for live evidence is `0x3cf96b11e9352d9653255d4f4fbd462db5a97d56`.
+  - A successful Base Sepolia x402 echo target is `https://x402.payai.network/api/base-sepolia/paid-content`.
+  - The live x402 Echo merchant refunds the test payment after a successful paid response, so it is a safe proof point for the payment path.
+  - The durable evidence bundle for the final live run lives in `tests/manual/evidence-bundle.json` and `tests/manual/live-demo-transcript.md`.
 
 ## Base Sepolia deployment
 
@@ -55,6 +61,10 @@ short, current, and biased toward things future agents are likely to forget.
   - `0xf4c78D5953410EC1615501652f93727f7f5A709e`
 - Current live contract:
   - `0xf4c78D5953410EC1615501652f93727f7f5A709e`
+- Current live Base Sepolia x402 payment evidence:
+  - wallet deploy tx `0x45ce62c5035cb9d3bb730f51c1d435698ae21e1a8c3d5acd7ee31acaa28e1251`
+  - successful x402 payment tx `0x23f359f2ba32e8a3cf55fbbc959e3692733a728fe3ebf6b05d22d3c1e84007e5`
+  - refund tx `0xc71db85f3099bc36d5eda79cc82ebd061b8565f75862cf01a74f934b78e56fe2`
 
 ## Live-demo gates
 

@@ -1,13 +1,15 @@
 {
   "commit_hash": "3c7835960873223ddacdaf3fb3d180a4fae79c81",
-  "test_summary": "Local contract deploy path verified with `uv run scripts/deploy_insurance_manager.py local-test`. Live Base Sepolia policy state verified onchain and advanced to `PayoutPaid` for the named policy. Circle x402 payment submission was attempted against live public endpoints, but the facilitator rejected the payment payload with HTTP 402 / invalid_request.",
+  "test_summary": "Local contract deploy path verified with `uv run scripts/deploy_insurance_manager.py local-test`. Live Base Sepolia policy state verified onchain and advanced to `PayoutPaid` for the named policy. Circle x402 payment submission succeeded against the live x402 Echo merchant on Base Sepolia, and the merchant refunded the test payment.",
   "screenshots": [],
   "logs": [
     "uv run scripts/deploy_insurance_manager.py local-test -> contract deployed locally at 0xf4c78D5953410EC1615501652f93727f7f5A709e",
     "circle wallet list --type agent --chain BASE -> agent wallet 0x9084a185b4c870321f261d12efb2305f8e3d4504",
     "circle services pay https://emc2ai.io/x402/bitquery/bagcheck/raw -> payment submitted, facilitator rejected payload with HTTP 402 invalid_request",
     "circle services pay https://emc2ai.io/x402/bitquery/arbitragescanner -> payment submitted, facilitator rejected payload with HTTP 402 invalid_request",
-    "onchain policy state for coverpilot-live-policy-001 -> status 5 (PayoutPaid)"
+    "onchain policy state for coverpilot-live-policy-001 -> status 5 (PayoutPaid)",
+    "circle wallet transfer 0x3cf96b11e9352d9653255d4f4fbd462db5a97d56 --amount 0 --address 0x3cf96b11e9352d9653255d4f4fbd462db5a97d56 --chain BASE-SEPOLIA -> wallet deployed onchain, txHash 0x45ce62c5035cb9d3bb730f51c1d435698ae21e1a8c3d5acd7ee31acaa28e1251",
+    "circle services pay https://x402.payai.network/api/base-sepolia/paid-content --address 0x3cf96b11e9352d9653255d4f4fbd462db5a97d56 --chain BASE-SEPOLIA -> success=true, transaction 0x23f359f2ba32e8a3cf55fbbc959e3692733a728fe3ebf6b05d22d3c1e84007e5, refund 0xc71db85f3099bc36d5eda79cc82ebd061b8565f75862cf01a74f934b78e56fe2"
   ],
   "policy_ids": [
     "0xb8f180462fc620c3a62073fde4a444eec71569c53904bb9a1060cbea5773acbc"
@@ -45,7 +47,7 @@
     "policy_status_after_tx": 5
   },
   "live_requirements": {
-    "circle_x402_payment": false,
+    "circle_x402_payment": true,
     "base_sepolia_policy_creation": true,
     "test_usdc_payout_after_oracle_resolution": true
   },
@@ -53,5 +55,21 @@
     "The live Base Sepolia contract now reports policy status 5 (PayoutPaid) for coverpilot-live-policy-001.",
     "The Circle CLI x402 attempts produced signed payment records, but the facilitator returned HTTP 402 invalid_request before a successful paid response was observed.",
     "The persistent reminder to commit everything after ultragoal completion remains in .omx/notepad.md."
-  ]
+  ],
+  "x402_payment_receipt": {
+    "network": "Base Sepolia",
+    "endpoint": "https://x402.payai.network/api/base-sepolia/paid-content",
+    "payer": "0x3cf96b11e9352d9653255d4f4fbd462db5a97d56",
+    "transaction": "0x23f359f2ba32e8a3cf55fbbc959e3692733a728fe3ebf6b05d22d3c1e84007e5",
+    "refundTransaction": "0xc71db85f3099bc36d5eda79cc82ebd061b8565f75862cf01a74f934b78e56fe2",
+    "premiumContent": "Have some rizz!"
+  },
+  "wallet_deploy_transaction": {
+    "tx_hash": "0x45ce62c5035cb9d3bb730f51c1d435698ae21e1a8c3d5acd7ee31acaa28e1251",
+    "block_height": 43082980,
+    "source_address": "0x3cf96b11e9352d9653255d4f4fbd462db5a97d56",
+    "destination_address": "0x3cf96b11e9352d9653255d4f4fbd462db5a97d56",
+    "amount": "0",
+    "chain": "BASE-SEPOLIA"
+  }
 }
