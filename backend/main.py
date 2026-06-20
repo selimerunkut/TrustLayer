@@ -16,8 +16,13 @@ from backend.schemas import (
     PolicyRecord,
     PolicyWriteRequest,
     TripIntent,
+    WalletBalanceResponse,
+    WalletTransactionsResponse,
 )
+from backend.services.circle_wallet import CircleWalletError, fetch_wallet_balance, fetch_wallet_transactions
 from backend.services.chain import ChainWriteResult, record_oracle_resolution, record_policy_purchase, record_policy_rejection
+from backend.services.pricing import quote_payout_usdc, quote_premium_usdc
+from backend.services.receipts import research_fee_usdc
 from backend.services.session_mode import fallback_mode_label, preflight_session_mode
 
 logger = logging.getLogger(__name__)
@@ -152,6 +157,20 @@ def create_app() -> FastAPI:
             "fallback_mode": fallback_mode_label(session_mode),
         }
 
+    @app.get("/wallet/balance", response_model=WalletBalanceResponse)
+    def wallet_balance() -> WalletBalanceResponse:
+        try:
+            return fetch_wallet_balance()
+        except CircleWalletError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    @app.get("/wallet/transactions", response_model=WalletTransactionsResponse)
+    def wallet_transactions(limit: int = 25) -> WalletTransactionsResponse:
+        try:
+            return fetch_wallet_transactions(limit=limit)
+        except CircleWalletError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+
     @app.post("/chat")
     def chat(intent: TripIntent) -> dict[str, str]:
         return {
@@ -175,12 +194,13 @@ def create_app() -> FastAPI:
         return request
 
     @app.post("/insurance/recommend")
-    def recommend(_: BudgetAuthorization) -> PolicyRecommendation:
+    def recommend(authorization: BudgetAuthorization) -> PolicyRecommendation:
+        fee = research_fee_usdc(authorization.max_budget_usdc)
         recommendation = PolicyRecommendation(
             product_line=CoverageLine.FLIGHT_DELAY,
             policy_name="Flight Delay Guard",
-            premium_usdc=42.0,
-            payout_usdc=300.0,
+            premium_usdc=quote_premium_usdc(authorization.max_budget_usdc, fee),
+            payout_usdc=quote_payout_usdc(authorization.max_budget_usdc),
             delay_trigger_minutes=180,
             coverage_start="2026-06-20T00:00:00Z",
             coverage_end="2026-06-20T23:59:59Z",

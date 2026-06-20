@@ -76,3 +76,38 @@ class OracleResolution(BaseModel):
     delay_minutes: int = Field(ge=0)
     observed_at: str = Field(min_length=1)
     resolver_address: str = Field(min_length=1)
+
+
+class WalletTokenBalance(BaseModel):
+    symbol: str = Field(min_length=1)
+    amount: str = Field(min_length=1)
+    blockchain: str = Field(min_length=1)
+    token_address: str = ""
+
+
+class WalletBalanceResponse(BaseModel):
+    wallet_id: str = Field(min_length=1)
+    usdc_total: float = Field(ge=0)
+    balances: list[WalletTokenBalance] = Field(default_factory=list)
+    simulated: bool = False
+    provenance: str = ""
+    broker_payer_address: str = ""
+    broker_payer_usdc: float | None = None
+
+
+class WalletTransactionItem(BaseModel):
+    id: str = Field(min_length=1)
+    state: str = Field(min_length=1)
+    tx_hash: str = ""
+    amount_usdc: float = Field(ge=0)
+    operation: str = ""
+    transaction_type: str = ""
+    create_date: str = ""
+    explorer_url: str = ""
+
+
+class WalletTransactionsResponse(BaseModel):
+    wallet_id: str = Field(min_length=1)
+    transactions: list[WalletTransactionItem] = Field(default_factory=list)
+    simulated: bool = False
+    provenance: str = ""
