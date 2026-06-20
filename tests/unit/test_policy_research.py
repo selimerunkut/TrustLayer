@@ -39,6 +39,18 @@ def test_get_policy_status_accepts_draft_id():
     assert status["status"] == DraftStatus.AUTHORIZED.value
 
 
+def test_confirm_budget_authorization_idempotent_after_recommendation():
+    """LLM may re-call confirm after get_policy_recommendation coalesced earlier steps."""
+    b = MockBrokerBackend()
+    b.mark_policy_research_done()
+    d = b.prepare_budget_authorization(45.0, "Sofia–Frankfurt–Santiago")
+    b.get_policy_recommendation(d.draft_id, "Sofia–Frankfurt–Santiago")
+    assert b.drafts[d.draft_id].status == DraftStatus.RECOMMENDED
+
+    confirmed = b.confirm_budget_authorization(d.draft_id, True)
+    assert confirmed.status == DraftStatus.RECOMMENDED
+
+
 def test_pay_knowledge_authorizes_when_draft_still_budget_prepared():
     """LLM sometimes skips confirm_budget_authorization; payment after explicit fee consent coalesces."""
     b = MockBrokerBackend()
