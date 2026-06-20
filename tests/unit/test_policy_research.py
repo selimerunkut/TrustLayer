@@ -63,6 +63,21 @@ def test_pay_knowledge_authorizes_when_draft_still_budget_prepared():
     assert receipt["x402_receipt"]
 
 
+def test_pay_knowledge_idempotent_when_recommendation_already_paid():
+    """LLM may call pay after get_policy_recommendation coalesced payment (no double debit)."""
+    b = MockBrokerBackend()
+    b.mark_policy_research_done()
+    d = b.prepare_budget_authorization(45.0, "Sofia–Frankfurt–Santiago")
+    b.confirm_budget_authorization(d.draft_id, True)
+    b.get_policy_recommendation(d.draft_id, "Sofia–Frankfurt–Santiago")
+    assert b.drafts[d.draft_id].status == DraftStatus.RECOMMENDED
+    wallet_after_first = b.broker_wallet_usdc
+    receipt2 = b.pay_knowledge_service(d.draft_id)
+    assert b.broker_wallet_usdc == wallet_after_first
+    assert receipt2.get("note", "").startswith("Research fee was already")
+    assert receipt2["x402_receipt"] == b.drafts[d.draft_id].x402_receipt
+
+
 def test_policy_research_returns_kb_shape():
     r = run_policy_research("Ryanair London layover Bogotá delay fear")
     assert r["kb_relative_path"] == "KB/flight_attributes.md"

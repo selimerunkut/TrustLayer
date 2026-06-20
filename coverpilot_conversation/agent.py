@@ -8,22 +8,20 @@ Follows repository skills:
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 
+from coverpilot_conversation.chat_llm import build_default_chat_llm
 from coverpilot_conversation.mock_backend import MockBrokerBackend
 from coverpilot_conversation.prompts import BROKER_SYSTEM_PROMPT
 from coverpilot_conversation.tools import build_broker_tools
 
 
 def _default_model() -> ChatOpenAI:
-    model_name = os.getenv("COVERPILOT_CHAT_MODEL", "gpt-4o-mini")
-    max_tokens = int(os.getenv("COVERPILOT_MAX_OUTPUT_TOKENS", "800"))
-    return ChatOpenAI(model=model_name, temperature=0.7, max_tokens=max(200, max_tokens))
+    return build_default_chat_llm()
 
 
 def build_broker_agent(
