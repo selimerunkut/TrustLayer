@@ -463,6 +463,9 @@ def test_streamlit_app_shows_budget_and_fee_before_authorization():
     source = Path("app/streamlit_app.py").read_text().lower()
     assert "maximum approved budget" in source
     assert "deterministic research-fee quote" in source
+    assert "circle wallet" in source
+    assert "blockscout" in source
+    assert "premium payer" in source
 
 
 def test_solidity_contract_scaffold_exists():

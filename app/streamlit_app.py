@@ -29,6 +29,12 @@ except ImportError:
     pass
 
 from backend.schemas import PolicyRecommendation
+from backend.services.base_sepolia import (
+    BASE_SEPOLIA_TEST_USDC_ADDRESS_DEFAULT,
+    blockscout_address_url,
+    blockscout_tx_url,
+    blockscout_usdc_token_url,
+)
 from backend.services.receipts import research_fee_usdc
 from coverpilot_conversation.agent import build_broker_agent
 from coverpilot_conversation.customer_directory import (
@@ -250,6 +256,148 @@ def build_fallback_banner(*, simulated: bool, provenance: str) -> str | None:
     return f"Fallback mode: {' / '.join(details)}"
 
 
+def _fetch_wallet_panel(api_base: str) -> tuple[dict | None, dict | None, str | None]:
+    """Load Circle wallet balance + CLI transaction history from the FastAPI backend."""
+    balance: dict | None = None
+    transactions: dict | None = None
+    error: str | None = None
+    try:
+        with httpx.Client(timeout=8.0) as client:
+            balance_resp = client.get(f"{api_base}/wallet/balance")
+            if balance_resp.status_code == 200:
+                balance = balance_resp.json()
+            else:
+                error = balance_resp.json().get("detail", balance_resp.text)
+            tx_resp = client.get(f"{api_base}/wallet/transactions", params={"limit": 15})
+            if tx_resp.status_code == 200:
+                transactions = tx_resp.json()
+            elif error is None:
+                error = tx_resp.json().get("detail", tx_resp.text)
+    except Exception as exc:
+        error = str(exc)
+    return balance, transactions, error
+
+
+def _load_wallet_panel_cache(api_base: str) -> dict:
+    cache = st.session_state.get("_wallet_panel_cache")
+    if cache is None:
+        balance, transactions, error = _fetch_wallet_panel(api_base)
+        cache = {"balance": balance, "transactions": transactions, "error": error}
+        st.session_state["_wallet_panel_cache"] = cache
+    return cache
+
+
+def _render_wallet_balance_bar(api_base: str, backend) -> None:
+    """Always-visible USDC balances on the main page."""
+    cache = _load_wallet_panel_cache(api_base)
+    balance = cache.get("balance")
+    error = cache.get("error")
+
+    usdc_addr = os.getenv("BASE_SEPOLIA_TEST_USDC_ADDRESS", BASE_SEPOLIA_TEST_USDC_ADDRESS_DEFAULT).strip()
+    token_link = blockscout_usdc_token_url(usdc_addr)
+
+    if error and balance is None:
+        st.info("Wallet balance unavailable — start the API to see live USDC.")
+        return
+
+    if not balance:
+        return
+
+    simulated = balance.get("simulated", False)
+    mode_label = "demo" if simulated else "live"
+    cols = st.columns(3)
+    with cols[0]:
+        st.metric(
+            "Circle wallet",
+            f"{balance.get('usdc_total', 0):.4f} USDC",
+            help=f"Agent wallet on Base Sepolia ({mode_label})",
+        )
+    payer_usdc = balance.get("broker_payer_usdc")
+    payer_addr = balance.get("broker_payer_address", "")
+    with cols[1]:
+        if payer_usdc is not None:
+            st.metric(
+                "Premium payer",
+                f"{float(payer_usdc):.4f} USDC",
+                help="Deployer wallet that pays on-chain premiums",
+            )
+        else:
+            st.metric("Premium payer", "—", help="Deployer USDC balance unavailable")
+    with cols[2]:
+        st.metric(
+            "Demo ledger",
+            f"{backend.broker_wallet_usdc:.2f} USDC",
+            help="In-memory broker balance for mock research/premium steps",
+        )
+
+    wallet_id = balance.get("wallet_id", "")
+    links: list[str] = [f"[USDC token]({token_link})"]
+    if wallet_id.startswith("0x"):
+        links.append(f"[Circle wallet]({blockscout_address_url(wallet_id)})")
+    if payer_addr.startswith("0x"):
+        links.append(f"[Premium payer]({blockscout_address_url(payer_addr)})")
+    if balance.get("provenance"):
+        links.append(f"`{balance['provenance']}`")
+    st.caption(" · ".join(links))
+
+
+def _render_circle_wallet_panel(api_base: str) -> None:
+    usdc_addr = os.getenv("BASE_SEPOLIA_TEST_USDC_ADDRESS", BASE_SEPOLIA_TEST_USDC_ADDRESS_DEFAULT).strip()
+    usdc_explorer = blockscout_usdc_token_url(usdc_addr)
+    with st.expander("Circle wallet (Base Sepolia)", expanded=True):
+        st.caption(
+            f"Test USDC token: [`{usdc_addr[:10]}…`]({usdc_explorer}) on "
+            "[Blockscout](https://base-sepolia.blockscout.com)."
+        )
+        if st.button("Refresh wallet", key="refresh_circle_wallet", use_container_width=True):
+            st.session_state.pop("_wallet_panel_cache", None)
+            st.rerun()
+
+        cache = _load_wallet_panel_cache(api_base)
+        balance = cache.get("balance")
+        transactions = cache.get("transactions")
+        error = cache.get("error")
+
+        if error and balance is None:
+            st.warning(f"Could not load wallet data: {error}")
+            st.caption("Start the API with `uv run uvicorn backend.main:app --reload`.")
+            return
+
+        if balance:
+            mode_bits = []
+            if balance.get("simulated"):
+                mode_bits.append("simulated")
+            if balance.get("provenance"):
+                mode_bits.append(balance["provenance"])
+            if mode_bits:
+                st.caption(" · ".join(mode_bits))
+            st.metric("USDC balance", f"{balance.get('usdc_total', 0):.4f}")
+            wallet_id = balance.get("wallet_id", "")
+            if wallet_id.startswith("0x"):
+                st.markdown(f"Wallet: [{wallet_id[:10]}…{wallet_id[-6:]}]({blockscout_address_url(wallet_id)})")
+
+        txs = (transactions or {}).get("transactions") or []
+        if not txs:
+            st.caption("No Circle CLI transactions yet.")
+            return
+
+        st.markdown("**Recent transactions**")
+        for tx in txs:
+            label = tx.get("operation") or tx.get("transaction_type") or "transfer"
+            amount = tx.get("amount_usdc", 0)
+            state = tx.get("state", "")
+            tx_hash = tx.get("tx_hash", "")
+            explorer = tx.get("explorer_url") or (blockscout_tx_url(tx_hash) if tx_hash.startswith("0x") else "")
+            line = f"**{label}** · {amount:.4f} USDC · {state}"
+            if explorer:
+                short = f"{tx_hash[:10]}…{tx_hash[-6:]}" if tx_hash else "view"
+                st.markdown(f"{line} · [{short}]({explorer})")
+            else:
+                st.markdown(line)
+            if tx.get("create_date"):
+                st.caption(tx["create_date"])
+
+
 def build_budget_quote_copy(max_budget_usdc: float) -> tuple[str, str]:
     fee_usdc = research_fee_usdc(max_budget_usdc)
     return (
@@ -281,9 +429,10 @@ def build_ui() -> None:
     if "chat_lines" not in st.session_state:
         st.session_state.chat_lines = []
 
-    st.session_state.chat_lines = [_normalize_chat_line(x) for x in st.session_state.chat_lines]
-
     agent, backend = st.session_state.agent_bundle
+    _render_wallet_balance_bar(_betty_internal_api_base(), backend)
+
+    st.session_state.chat_lines = [_normalize_chat_line(x) for x in st.session_state.chat_lines]
 
     config = {
         "configurable": {"thread_id": st.session_state.thread_id},
@@ -307,6 +456,7 @@ def build_ui() -> None:
         )
         st.session_state.crm_customer_id = (crm or "vasiliy").strip().lower()
         backend.session_customer_id = st.session_state.crm_customer_id
+        _render_circle_wallet_panel(_betty_internal_api_base())
         with st.expander("Debug", expanded=False):
             st.caption(st.session_state.thread_id)
             st.code(backend.snapshot_json(), language="json")
