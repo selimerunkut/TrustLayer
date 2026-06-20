@@ -1,0 +1,60 @@
+name: trustlayer
+
+x-trustlayer-image: &trustlayer_image
+  build:
+    context: .
+    args:
+      SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
+
+services:
+  trustlayer-api:
+    <<: *trustlayer_image
+    command:
+      - uvicorn
+      - backend.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    environment:
+      BETTY_INTERNAL_API_BASE: http://trustlayer-api:8000
+      TRUSTLAYER_CORS_ORIGINS: http://127.0.0.1:8501,http://localhost:8501,https://trustlayer.37-27-94-136.sslip.io
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  trustlayer-web:
+    <<: *trustlayer_image
+    command:
+      - streamlit
+      - run
+      - app/streamlit_app.py
+      - --server.address
+      - 0.0.0.0
+      - --server.port
+      - "8501"
+      - --server.headless=true
+      - --browser.gatherUsageStats=false
+    environment:
+      BETTY_INTERNAL_API_BASE: http://trustlayer-api:8000
+      BETTY_PUBLIC_API_BASE: https://trustlayer-api.37-27-94-136.sslip.io
+    expose:
+      - "8501"
+    depends_on:
+      trustlayer-api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=3).read()"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped

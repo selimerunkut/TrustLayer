@@ -1,4 +1,4 @@
-"""LangChain `@tool` definitions for the CoverPilot broker (mock backend).
+"""LangChain `@tool` definitions for the TrustLayer broker (mock backend).
 
 Aligned with `ideas.md` tool names. Deterministic money/policy transitions live in
 `mock_backend.py`; the LLM only selects tools and explains structured results.

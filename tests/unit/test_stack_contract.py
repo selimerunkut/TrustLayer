@@ -39,10 +39,11 @@ from backend.tools import APPROVED_BROKER_TOOL_NAMES, validate_broker_tools
 
 def test_fastapi_app_boots_and_health_route_exists():
     app = create_app()
-    assert app.title == "CoverPilot API"
+    assert app.title == "TrustLayer API"
     paths = [getattr(r, "path", None) for r in app.routes]
     paths = [p for p in paths if isinstance(p, str)]
     assert "/health" in paths
+    assert "/version" in paths
 
 
 def test_customer_facing_receipt_hides_pool_selection_and_crypto_details():
@@ -159,6 +160,17 @@ def test_uv_python_version_and_toml_dependency_contract():
     assert "streamlit" in pyproject
     assert "pydantic" in pyproject
     assert "langchain" in pyproject
+    assert Path("Dockerfile").exists()
+    assert Path("compose.yaml").exists()
+    assert Path(".github/workflows/deploy-main.yml").exists()
+    compose = Path("compose.yaml").read_text()
+    assert "trustlayer-api" in compose
+    assert "trustlayer-web" in compose
+    assert "SOURCE_COMMIT" in compose
+    workflow = Path(".github/workflows/deploy-main.yml").read_text()
+    assert "Coolify deployment" in workflow
+    assert "COOLIFY_RESOURCE_UUID" in workflow
+    assert "TRUSTLAYER_API_URL" in workflow
 
 
 def test_manual_evidence_bundle_template_exposes_required_live_fields():
@@ -255,6 +267,16 @@ def test_shared_models_cover_the_fixed_stack_contract():
 def test_fastapi_routes_cover_the_planned_boundary(monkeypatch):
     client = TestClient(create_app())
     assert client.get("/health").json() == {"status": "ok"}
+    assert client.get("/version").json()["git_sha"] == "unknown"
+    cors = client.options(
+        "/health",
+        headers={
+            "Origin": "http://127.0.0.1:8501",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert cors.status_code == 200
+    assert cors.headers["access-control-allow-origin"] == "http://127.0.0.1:8501"
     chat = client.post(
         "/chat",
         json={

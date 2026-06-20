@@ -1,0 +1,106 @@
+{
+  "timestamp": "2026-06-20T01:31:09.576Z",
+  "url": "https://emc2ai.io/x402/bitquery/arbitragescanner",
+  "method": "POST",
+  "address": "0x9084a185b4c870321f261d12efb2305f8e3d4504",
+  "blockchain": "BASE",
+  "payment": {
+    "amount": "$1.15 USDC",
+    "chain": "Base",
+    "scheme": "USD Coin",
+    "seller": "0xc9368b30BD620164FD1a05a5d99dcaf8Ae754775"
+  },
+  "paymentHeader": "eyJ4NDAyVmVyc2lvbiI6MiwicGF5bG9hZCI6eyJhdXRob3JpemF0aW9uIjp7ImZyb20iOiIweDkwODRhMTg1YjRjODcwMzIxZjI2MWQxMmVmYjIzMDVmOGUzZDQ1MDQiLCJ0byI6IjB4YzkzNjhiMzBCRDYyMDE2NEZEMWEwNWE1ZDk5ZGNhZjhBZTc1NDc3NSIsInZhbHVlIjoiMTE1MDAwMCIsInZhbGlkQWZ0ZXIiOiIxNzgxOTE4NDY3IiwidmFsaWRCZWZvcmUiOiIxNzgxOTE5MTU3Iiwibm9uY2UiOiIweDY4YzA4NGMyN2RkMThmMGM0ZWJiMmE3YTQzYzI0ZDhkZGQzMGM2ZWEzNjkxODQ1YzNlZDI5MTZkNDRiNWU4OTgifSwic2lnbmF0dXJlIjoiMHhjN2Q0NTM4NTNiMjcyNjEwY2E4NGM5YTQ5MGM5MmYxMzNlODk5MmQzYzJkZmQ0MjQxYzZkMzc2MzI2OTYwOTAzMDgyZTBmYjQyODEwN2FkYzIwNGUzNDZkZGQ1ODliNjI4MThmOTNjMjU1OTJkODIxNmEzNTEzMzVjZjIwMjBiMzFjIn0sImFjY2VwdGVkIjp7InNjaGVtZSI6ImV4YWN0IiwibmV0d29yayI6ImVpcDE1NTo4NDUzIiwiYW1vdW50IjoiMTE1MDAwMCIsIm1heEFtb3VudFJlcXVpcmVkIjoiMTE1MDAwMCIsInJlc291cmNlIjoiaHR0cHM6Ly9lbWMyYWkuaW8veDQwMi9iaXRxdWVyeS9hcmJpdHJhZ2VzY2FubmVyIiwiZGVzY3JpcHRpb24iOiJDcm9zcy1jaGFpbiBwcmljZSBkaXNjcmVwYW5jaWVzIGFuZCBwcm9maXRhYmxlIGFyYml0cmFnZSByb3V0ZXMuICh3aXRoIEFJIGFuYWx5c2lzKSIsIm1pbWVUeXBlIjoiYXBwbGljYXRpb24vanNvbiIsInBheVRvIjoiMHhjOTM2OGIzMEJENjIwMTY0RkQxYTA1YTVkOTlkY2FmOEFlNzU0Nzc1IiwibWF4VGltZW91dFNlY29uZHMiOjkwLCJhc3NldCI6IjB4ODMzNTg5ZkNENmVEYjZFMDhmNGM3QzMyRDRmNzFiNTRiZEEwMjkxMyIsImRpc2NvdmVyYWJsZSI6dHJ1ZSwib3V0cHV0U2NoZW1hIjp7ImlucHV0Ijp7InR5cGUiOiJodHRwIiwibWV0aG9kIjoiUE9TVCIsImJvZHlUeXBlIjoianNvbiIsImJvZHlGaWVsZHMiOnsiY2hhaW4iOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiQmxvY2tjaGFpbiB0byBxdWVyeSAoZS5nLiwgYmFzZSwgZXRoZXJldW0sIGJzYywgc29sYW5hKSIsImVudW0iOlsiYmFzZSIsImV0aGVyZXVtIiwiYnNjIiwiYXJiaXRydW0iLCJwb2x5Z29uIiwib3B0aW1pc20iLCJzb2xhbmEiXX0sImxpbWl0Ijp7InR5cGUiOiJzdHJpbmciLCJkZXNjcmlwdGlvbiI6Ik1heGltdW0gbnVtYmVyIG9mIHJlc3VsdHMgdG8gcmV0dXJuIChkZWZhdWx0OiAxMCwgbWF4OiA1MDApIn0sInRpbWVwZXJpb2QiOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiVGltZSBwZXJpb2QgZm9yIGFuYWx5c2lzIChlLmcuLCAxaCwgMjRoLCA3ZCwgMzBkKSIsImVudW0iOlsiMWgiLCI0aCIsIjI0aCIsIjdkIiwiMzBkIl19fSwiZGlzY292ZXJhYmxlIjp0cnVlfSwib3V0cHV0Ijp7InN0YXR1cyI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJSZXF1ZXN0IHN0YXR1cyAoY29tcGxldGVkIG9yIGVycm9yKSJ9LCJyZXN1bHQiOnsidHlwZSI6Im9iamVjdCIsImRlc2NyaXB0aW9uIjoiUXVlcnkgcmVzdWx0IGRhdGEifSwiYW5hbHlzaXMiOnsidHlwZSI6Im9iamVjdCIsImRlc2NyaXB0aW9uIjoiQUktcG93ZXJlZCBhbmFseXNpcyBhbmQgaW5zaWdodHMifSwicGF5bWVudCI6eyJ0eXBlIjoib2JqZWN0IiwiZGVzY3JpcHRpb24iOiJQYXltZW50IHJlY2VpcHQgaW5mb3JtYXRpb24ifX19LCJleHRyYSI6eyJuYW1lIjoiVVNEIENvaW4iLCJ2ZXJzaW9uIjoiMiJ9fSwicmVzb3VyY2UiOnsidXJsIjoiaHR0cHM6Ly9lbWMyYWkuaW8veDQwMi9iaXRxdWVyeS9hcmJpdHJhZ2VzY2FubmVyIiwiZGVzY3JpcHRpb24iOiJDcm9zcy1jaGFpbiBwcmljZSBkaXNjcmVwYW5jaWVzIGFuZCBwcm9maXRhYmxlIGFyYml0cmFnZSByb3V0ZXMuICh3aXRoIEFJIGFuYWx5c2lzKSIsIm1pbWVUeXBlIjoiYXBwbGljYXRpb24vanNvbiJ9fQ==",
+  "paymentPayload": {
+    "x402Version": 2,
+    "payload": {
+      "authorization": {
+        "from": "0x9084a185b4c870321f261d12efb2305f8e3d4504",
+        "to": "0xc9368b30BD620164FD1a05a5d99dcaf8Ae754775",
+        "value": "1150000",
+        "validAfter": "1781918467",
+        "validBefore": "1781919157",
+        "nonce": "0x68c084c27dd18f0c4ebb2a7a43c24d8ddd30c6ea3691845c3ed2916d44b5e898"
+      },
+      "signature": "0xc7d453853b272610ca84c9a490c92f133e8992d3c2dfd4241c6d376326960903082e0fb428107adc204e346ddd589b62818f93c25592d8216a351335cf2020b31c"
+    },
+    "accepted": {
+      "scheme": "exact",
+      "network": "eip155:8453",
+      "amount": "1150000",
+      "maxAmountRequired": "1150000",
+      "resource": "https://emc2ai.io/x402/bitquery/arbitragescanner",
+      "description": "Cross-chain price discrepancies and profitable arbitrage routes. (with AI analysis)",
+      "mimeType": "application/json",
+      "payTo": "0xc9368b30BD620164FD1a05a5d99dcaf8Ae754775",
+      "maxTimeoutSeconds": 90,
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "discoverable": true,
+      "outputSchema": {
+        "input": {
+          "type": "http",
+          "method": "POST",
+          "bodyType": "json",
+          "bodyFields": {
+            "chain": {
+              "type": "string",
+              "description": "Blockchain to query (e.g., base, ethereum, bsc, solana)",
+              "enum": [
+                "base",
+                "ethereum",
+                "bsc",
+                "arbitrum",
+                "polygon",
+                "optimism",
+                "solana"
+              ]
+            },
+            "limit": {
+              "type": "string",
+              "description": "Maximum number of results to return (default: 10, max: 500)"
+            },
+            "timeperiod": {
+              "type": "string",
+              "description": "Time period for analysis (e.g., 1h, 24h, 7d, 30d)",
+              "enum": [
+                "1h",
+                "4h",
+                "24h",
+                "7d",
+                "30d"
+              ]
+            }
+          },
+          "discoverable": true
+        },
+        "output": {
+          "status": {
+            "type": "string",
+            "description": "Request status (completed or error)"
+          },
+          "result": {
+            "type": "object",
+            "description": "Query result data"
+          },
+          "analysis": {
+            "type": "object",
+            "description": "AI-powered analysis and insights"
+          },
+          "payment": {
+            "type": "object",
+            "description": "Payment receipt information"
+          }
+        }
+      },
+      "extra": {
+        "name": "USD Coin",
+        "version": "2"
+      }
+    },
+    "resource": {
+      "url": "https://emc2ai.io/x402/bitquery/arbitragescanner",
+      "description": "Cross-chain price discrepancies and profitable arbitrage routes. (with AI analysis)",
+      "mimeType": "application/json"
+    }
+  }
+}
