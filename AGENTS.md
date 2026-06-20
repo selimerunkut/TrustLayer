@@ -36,8 +36,6 @@ short, current, and biased toward things future agents are likely to forget.
   - `circle wallet list --type agent --chain BASE`
   - `circle wallet create --type agent`
 - Treat the run-scoped evidence bundle as the authoritative home for live coordinates and receipts.
-- `OPENROUTER_API_KEY` is part of the local env contract; mirror it in Coolify
-  whenever `.env` grows so live and local configs stay aligned.
 - `NEBIUS_API_KEY` is another runtime secret; keep it in local `.env`, the
   sample env docs, and Coolify whenever the Nebius integration is active.
 
