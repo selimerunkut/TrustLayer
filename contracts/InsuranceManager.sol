@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+interface IERC20 {
+    function transfer(address to, uint256 amount) external returns (bool);
+
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+
+    function allowance(address owner, address spender) external view returns (uint256);
+}
+
 contract InsuranceManager {
     enum PolicyStatus {
         Pending,
@@ -27,13 +35,29 @@ contract InsuranceManager {
         PolicyStatus status;
     }
 
+    IERC20 public immutable usdcToken;
+    address public immutable premiumVault;
+
     mapping(bytes32 => PolicyRecord) public policies;
 
     event PolicyPurchased(bytes32 indexed policyId, address indexed customerWallet, uint256 escrowedUsdc);
+    event PremiumTransferred(
+        bytes32 indexed policyId,
+        address indexed payer,
+        address indexed vault,
+        uint256 premiumUsdc
+    );
     event PolicyRejected(bytes32 indexed policyId);
     event PolicyRefunded(bytes32 indexed policyId, uint256 refundUsdc);
     event PolicyPayoutApproved(bytes32 indexed policyId, uint256 payoutUsdc);
     event PolicyPayoutPaid(bytes32 indexed policyId, uint256 payoutUsdc);
+
+    constructor(address usdcTokenAddress, address premiumVaultAddress) {
+        require(usdcTokenAddress != address(0), "usdc token required");
+        require(premiumVaultAddress != address(0), "premium vault required");
+        usdcToken = IERC20(usdcTokenAddress);
+        premiumVault = premiumVaultAddress;
+    }
 
     function _policyMatches(
         PolicyRecord storage existing,
@@ -100,6 +124,13 @@ contract InsuranceManager {
             return;
         }
 
+        require(premiumUsdc > 0, "premium required");
+        require(
+            usdcToken.transferFrom(msg.sender, premiumVault, premiumUsdc),
+            "premium transfer failed"
+        );
+        emit PremiumTransferred(policyId, msg.sender, premiumVault, premiumUsdc);
+
         policies[policyId] = PolicyRecord({
             customerWallet: customerWallet,
             escrowedUsdc: budgetLockedUsdc,
@@ -149,6 +180,10 @@ contract InsuranceManager {
         PolicyRecord storage policy = policies[policyId];
         require(policy.customerWallet != address(0), "unknown policy");
         require(policy.status == PolicyStatus.PayoutApproved, "payout not approved");
+        require(
+            usdcToken.transfer(policy.customerWallet, policy.payoutUsdc),
+            "payout transfer failed"
+        );
         policy.status = PolicyStatus.PayoutPaid;
         emit PolicyPayoutPaid(policyId, policy.payoutUsdc);
     }

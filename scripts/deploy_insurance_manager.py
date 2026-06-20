@@ -86,7 +86,14 @@ def compile_contract() -> tuple[list[dict[str, Any]], str]:
     return contract["abi"], contract["evm"]["bytecode"]["object"]
 
 
-def build_deploy_tx(w3: Web3, account: Account, contract: Any) -> dict[str, Any]:
+def build_deploy_tx(
+    w3: Web3,
+    account: Account,
+    contract: Any,
+    *,
+    usdc_address: str,
+    vault_address: str,
+) -> dict[str, Any]:
     nonce = w3.eth.get_transaction_count(account.address)
     deploy_tx = {
         "from": account.address,
@@ -94,22 +101,44 @@ def build_deploy_tx(w3: Web3, account: Account, contract: Any) -> dict[str, Any]
     }
     chain_id = w3.eth.chain_id
     deploy_tx["chainId"] = chain_id
-    deploy_tx["gas"] = int(w3.eth.estimate_gas(contract.constructor().build_transaction(deploy_tx)) * 1.2)
+
+    constructor = contract.constructor(
+        Web3.to_checksum_address(usdc_address),
+        Web3.to_checksum_address(vault_address),
+    )
+    unsigned = constructor.build_transaction(deploy_tx)
+    unsigned["gas"] = int(w3.eth.estimate_gas(unsigned) * 1.2)
 
     latest_block = w3.eth.get_block("latest")
     base_fee = latest_block.get("baseFeePerGas")
     if base_fee is not None:
         priority_fee = w3.to_wei(1, "gwei")
-        deploy_tx["maxPriorityFeePerGas"] = priority_fee
-        deploy_tx["maxFeePerGas"] = base_fee * 2 + priority_fee
+        unsigned["maxPriorityFeePerGas"] = priority_fee
+        unsigned["maxFeePerGas"] = base_fee * 2 + priority_fee
     else:
-        deploy_tx["gasPrice"] = w3.eth.gas_price
-    return contract.constructor().build_transaction(deploy_tx)
+        unsigned["gasPrice"] = w3.eth.gas_price
+    return unsigned
+
 
 def deploy_with_web3(w3: Web3, account: Account) -> str:
+    load_env()
+    usdc_address = os.environ.get("BASE_SEPOLIA_TEST_USDC_ADDRESS", "").strip()
+    if not usdc_address:
+        raise SystemExit("BASE_SEPOLIA_TEST_USDC_ADDRESS is missing")
+    vault_address = (
+        os.environ.get("TRUSTLAYER_PREMIUM_VAULT_ADDRESS", "").strip()
+        or account.address
+    )
+
     abi, bytecode = compile_contract()
     contract = w3.eth.contract(abi=abi, bytecode=bytecode)
-    deploy_tx = build_deploy_tx(w3, account, contract)
+    deploy_tx = build_deploy_tx(
+        w3,
+        account,
+        contract,
+        usdc_address=usdc_address,
+        vault_address=vault_address,
+    )
     signed = account.sign_transaction(deploy_tx)
     tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
     receipt = w3.eth.wait_for_transaction_receipt(tx_hash)

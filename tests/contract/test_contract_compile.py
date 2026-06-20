@@ -31,4 +31,4 @@ def test_insurance_manager_solidity_compiles_via_solc():
     assert not errors
     abi = output["contracts"]["InsuranceManager.sol"]["InsuranceManager"]["abi"]
     names = {item.get("name") for item in abi if item.get("type") == "function"}
-    assert {"purchasePolicy", "rejectPolicy", "resolvePolicy", "refundPolicy", "payOut"} <= names
+    assert {"purchasePolicy", "rejectPolicy", "resolvePolicy", "refundPolicy", "payOut", "premiumVault"} <= names
