@@ -33,7 +33,7 @@ uv run streamlit run app/streamlit_app.py
 uv run uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Streamlit hosts **Betty** (TrustLayer broker): set `OPENAI_API_KEY` in `.env` (see `.env.example`). The same `coverpilot_conversation` tools and prompts power the chat; the mock broker uses the same research-fee bands as `backend.services.receipts`.
+Streamlit hosts **Betty** (TrustLayer broker): set `OPENAI_API_KEY` in `.env` (see `.env.example`). The same broker tools and prompts power the chat; the mock broker uses the same research-fee bands as `backend.services.receipts`.
 
 **Voice:** The **Hold to speak** control is always shown under the chat. It calls FastAPI (`uvicorn backend.main:app` on port **8000** by default). Run the API in a second terminal while using voice. Set `ELEVENLABS_*` for TTS and optionally `BETTY_PUBLIC_API_BASE` if the API is not on `127.0.0.1:8000`. Speech rate: `ELEVENLABS_TTS_SPEED` (default `1.1`, clamped to `0.7`–`1.2` for ElevenLabs validation).
 
