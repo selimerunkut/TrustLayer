@@ -132,13 +132,24 @@ class MockBrokerBackend:
 
     def confirm_budget_authorization(self, draft_id: str, customer_confirms_demo_terms: bool) -> PolicyDraft:
         d = self._require_draft(draft_id)
-        if d.status != DraftStatus.BUDGET_PREPARED:
-            raise ValueError(f"Draft not awaiting confirmation (status={d.status})")
-        if not customer_confirms_demo_terms:
-            d.status = DraftStatus.REJECTED
+        if d.status == DraftStatus.BUDGET_PREPARED:
+            if not customer_confirms_demo_terms:
+                d.status = DraftStatus.REJECTED
+                return d
+            d.status = DraftStatus.AUTHORIZED
             return d
-        d.status = DraftStatus.AUTHORIZED
-        return d
+        # Demo resilience: the LLM often re-calls confirm after coalescing steps
+        # (pay_knowledge_service / get_policy_recommendation) advanced the draft.
+        if d.status in (
+            DraftStatus.AUTHORIZED,
+            DraftStatus.RESEARCH_PAID,
+            DraftStatus.RECOMMENDED,
+            DraftStatus.PURCHASED,
+        ):
+            return d
+        if d.status == DraftStatus.REJECTED:
+            raise ValueError(f"Draft already rejected (status={d.status})")
+        raise ValueError(f"Draft not awaiting confirmation (status={d.status})")
 
     def get_research_allowance(self, draft_id: str) -> dict[str, Any]:
         d = self._require_draft(draft_id)
