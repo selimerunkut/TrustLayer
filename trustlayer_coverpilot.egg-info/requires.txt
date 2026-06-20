@@ -9,6 +9,10 @@ langgraph<2,>=1
 langsmith<1,>=0.3
 python-dotenv<2,>=1
 httpx<1,>=0.27
+web3<8,>=7
+py-solc-x<3,>=2
+eth-tester==0.13.0b1
+py-evm==0.12.1b1
 
 [dev]
 pytest<9,>=8

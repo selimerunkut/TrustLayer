@@ -15,6 +15,10 @@ Requires-Dist: langgraph<2,>=1
 Requires-Dist: langsmith<1,>=0.3
 Requires-Dist: python-dotenv<2,>=1
 Requires-Dist: httpx<1,>=0.27
+Requires-Dist: web3<8,>=7
+Requires-Dist: py-solc-x<3,>=2
+Requires-Dist: eth-tester==0.13.0b1
+Requires-Dist: py-evm==0.12.1b1
 Provides-Extra: dev
 Requires-Dist: pytest<9,>=8; extra == "dev"
 
@@ -55,4 +59,15 @@ uv run uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 
 Streamlit hosts **Betty** (TrustLayer broker): set `OPENAI_API_KEY` in `.env` (see `.env.example`). The same `coverpilot_conversation` tools and prompts power the chat; the mock broker uses the same research-fee bands as `backend.services.receipts`.
 
-**Voice:** Turn on **Voice** under the chat. That embed calls the FastAPI routes (`uvicorn backend.main:app` on port 8000 by default). Set `ELEVENLABS_*` and optionally `BETTY_PUBLIC_API_BASE` if the API is not on `127.0.0.1:8000`. Speech rate: `ELEVENLABS_TTS_SPEED` (default `1.25`).
+**Voice:** Turn on **Voice** under the chat. That embed calls the FastAPI routes (`uvicorn backend.main:app` on port 8000 by default). Set `ELEVENLABS_*` and optionally `BETTY_PUBLIC_API_BASE` if the API is not on `127.0.0.1:8000`. Speech rate: `ELEVENLABS_TTS_SPEED` (default `1.1`, clamped to `0.7`–`1.2` for the current ElevenLabs TTS validation).
+## Circle / x402 live-testnet notes
+
+- `CIRCLE_API_KEY` comes from the Circle Console.
+- `CIRCLE_WALLET_ID` is the Circle agent-wallet identifier string, not the onchain address.
+- `circle wallet login` uses email OTP for the agent-wallet session.
+- Before `circle services pay` can sign x402 payments, the agent wallet must be deployed on-chain at least once. In this repo, a zero-value self-transfer on Base Sepolia was enough to deploy it.
+- The Base Sepolia test wallet can be funded with the Circle faucet.
+- A working Base Sepolia x402 echo target for verification is:
+  - `https://x402.payai.network/api/base-sepolia/paid-content`
+- The live x402 Echo merchant returns a paid response and refunds the test payment, which makes it useful for proving the payment flow without burning funds.
+- The live evidence bundle for this repo is stored in `tests/manual/evidence-bundle.json` and `tests/manual/live-demo-transcript.md`.
