@@ -22,7 +22,8 @@ from coverpilot_conversation.tools import build_broker_tools
 
 def _default_model() -> ChatOpenAI:
     model_name = os.getenv("COVERPILOT_CHAT_MODEL", "gpt-4o-mini")
-    return ChatOpenAI(model=model_name, temperature=0.2)
+    max_tokens = int(os.getenv("COVERPILOT_MAX_OUTPUT_TOKENS", "420"))
+    return ChatOpenAI(model=model_name, temperature=0.2, max_tokens=max(200, max_tokens))
 
 
 def build_broker_agent(
@@ -30,15 +31,25 @@ def build_broker_agent(
     *,
     model: Any | None = None,
     checkpointer: MemorySaver | None = None,
+    use_memory: bool = True,
 ) -> tuple[Any, MockBrokerBackend]:
     """Return `(compiled_agent, backend)` for `invoke` / Streamlit.
 
     The compiled graph is LangChain's `create_agent` output (LangGraph-backed). Use
-    `config={"configurable": {"thread_id": ...}, "recursion_limit": 25}` on each call.
+    ``config={"configurable": {"thread_id": ...}, "recursion_limit": 25}`` on each call.
+
+    When ``use_memory`` is False, no checkpointer is attached. The caller should pass
+    the **full** message list on each ``invoke`` (e.g. rebuilt from Streamlit ``chat_lines``
+    plus voice-synced rows) so the model always matches what the UI shows.
     """
     be = backend or MockBrokerBackend()
     tools = build_broker_tools(be)
-    cp = checkpointer or MemorySaver()
+    if not use_memory:
+        cp = None
+    elif checkpointer is not None:
+        cp = checkpointer
+    else:
+        cp = MemorySaver()
     llm = model or _default_model()
     agent = create_agent(
         model=llm,

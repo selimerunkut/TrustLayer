@@ -1,6 +1,9 @@
 from langchain_core.messages import AIMessage
 
-from coverpilot_conversation.message_extract import extract_last_ai_text
+from coverpilot_conversation.message_extract import (
+    extract_last_ai_text,
+    format_assistant_reply_for_display,
+)
 
 
 def test_extract_last_ai_text_plain_string():
@@ -26,3 +29,12 @@ def test_extract_last_ai_text_blocks():
     }
     out = extract_last_ai_text(r)
     assert "Line one" in out and "Line two" in out
+
+
+def test_format_assistant_reply_strips_markdown_headers_and_bold():
+    raw = "### EU Rules\n**Delay**: €250 if **late**.\n- one\n- two"
+    out = format_assistant_reply_for_display(raw)
+    assert "###" not in out
+    assert "**" not in out
+    assert "Delay" in out and "€250" in out
+    assert "– one" in out or "one" in out
