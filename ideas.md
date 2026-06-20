@@ -224,11 +224,12 @@ The broker receives a small, explicit set of FastAPI-backed Python tools:
 - `prepare_budget_authorization(max_budget_usdc, trip_summary)`
 - `confirm_budget_authorization(policy_draft_id, customer_confirms_demo_terms)`
 - `get_research_allowance(policy_draft_id)`
-- `pay_knowledge_service(policy_draft_id)`
+- `pay_knowledge_research_fee(policy_draft_id, customer_confirms_research_fee)` — **research/knowledge fee only** (unlocks catalogue lookup; mock today; optional future on-chain nanopayment for this fee only)
 - `get_policy_recommendation(policy_draft_id, trip_details)`
-- `purchase_policy(policy_draft_id)`
+- `purchase_policy(policy_draft_id, customer_confirms_insurance_purchase)` — **insurance purchase**; on-chain policy record only after explicit buy-in
 - `reject_policy(policy_draft_id)`
 - `get_policy_status(policy_id)`
+- `get_policy_onchain(policy_id)` — read policy from `InsuranceManager` on Base Sepolia (optional)
 
 Tool inputs and outputs use Pydantic schemas. FastAPI checks authorization, amount limits, current policy state, duplicate requests, and contract results before returning data to the model. The model may choose an appropriate tool and explain its result, but it cannot override these checks.
 

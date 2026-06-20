@@ -41,4 +41,4 @@ include-package-data = true
 app = ["*.html"]
 
 [tool.setuptools.packages.find]
-include = ["app*", "backend*", "coverpilot_conversation*"]
+include = ["app*", "backend*", "contracts*", "coverpilot_conversation*"]

@@ -99,6 +99,10 @@ def register_betty_voice_routes(app: FastAPI) -> None:
             if crm:
                 payload = f"{crm}\n\n---\nTraveler message:\n{spoken}"
 
+        draft_hint = backend.active_draft_context_block()
+        if draft_hint:
+            payload = f"{draft_hint}\n\n---\n{payload}"
+
         boot = (body.conversation_bootstrap or "").strip()
         if boot and not getattr(backend, "_voice_bootstrap_consumed", False):
             setattr(backend, "_voice_bootstrap_consumed", True)
