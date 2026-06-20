@@ -7,6 +7,7 @@ is centralized in ``build_non_insurance_disclaimer`` for compliance reuse.
 
 from __future__ import annotations
 
+import html
 import logging
 import os
 import uuid
@@ -14,7 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import streamlit as st
-from langchain_core.messages import AIMessage
+import streamlit.components.v1 as components
 
 try:
     from dotenv import load_dotenv
@@ -30,8 +31,75 @@ from coverpilot_conversation.customer_directory import (
     session_crm_context_block,
     user_message_suggests_travel_planning,
 )
+from coverpilot_conversation.message_extract import extract_last_ai_text
 
 logger = logging.getLogger(__name__)
+
+
+def _betty_api_base() -> str:
+    return os.getenv("BETTY_PUBLIC_API_BASE", "http://127.0.0.1:8000").rstrip("/")
+
+
+def _voice_embed_html() -> str:
+    path = Path(__file__).resolve().parent / "voice_embed.html"
+    raw = path.read_text(encoding="utf-8")
+    crm = st.session_state.crm_customer_id or "vasiliy"
+    return (
+        raw.replace("__BETTY_API_BASE__", _betty_api_base())
+        .replace("__THREAD_ID__", st.session_state.thread_id)
+        .replace("__CRM_ID__", html.escape(crm, quote=True))
+    )
+
+
+def _normalize_chat_line(item: tuple) -> tuple[str, str, bytes | None]:
+    """Support legacy 2-tuples (role, text) and current 3-tuples (role, text, mp3_or_none)."""
+    if len(item) == 2:
+        return (item[0], item[1], None)
+    return (item[0], item[1], item[2])
+
+
+def _maybe_synthesize_reply_audio(reply: str, *, voice_mode: bool) -> bytes | None:
+    if not voice_mode:
+        return None
+    try:
+        from backend.services.elevenlabs_voice import (
+            elevenlabs_configured,
+            synthesize_speech_mp3,
+        )
+    except ImportError:
+        return None
+    if not elevenlabs_configured():
+        return None
+    try:
+        return synthesize_speech_mp3(reply)
+    except Exception:
+        logger.exception("ElevenLabs TTS failed; continuing without audio.")
+        return None
+
+
+def _run_betty_turn(
+    user_text: str,
+    *,
+    agent,
+    backend,
+    config: dict,
+    voice_mode: bool,
+) -> None:
+    """Append user message, invoke broker, append assistant reply (optional MP3 for voice mode)."""
+    st.session_state.chat_lines.append(("user", user_text, None))
+    with st.spinner("Betty is thinking…"):
+        payload = user_text
+        if user_message_suggests_travel_planning(user_text):
+            crm = session_crm_context_block(session_default_customer_id=backend.session_customer_id)
+            if crm:
+                payload = f"{crm}\n\n---\nTraveler message:\n{user_text}"
+        result = agent.invoke(
+            {"messages": [{"role": "user", "content": payload}]},
+            config=config,
+        )
+    reply = extract_last_ai_text(result)
+    audio = _maybe_synthesize_reply_audio(reply, voice_mode=voice_mode)
+    st.session_state.chat_lines.append(("assistant", reply, audio))
 
 
 @dataclass(frozen=True)
@@ -95,29 +163,6 @@ def build_budget_quote_copy(max_budget_usdc: float) -> tuple[str, str]:
     )
 
 
-def _extract_assistant_text(result: dict) -> str:
-    """Last human-visible AIMessage content (handles str or content blocks)."""
-    for m in reversed(result.get("messages", [])):
-        if isinstance(m, AIMessage):
-            c = m.content
-            if isinstance(c, str) and c.strip():
-                return c.strip()
-            if isinstance(c, list):
-                parts: list[str] = []
-                for block in c:
-                    if isinstance(block, str):
-                        parts.append(block)
-                    elif isinstance(block, dict) and block.get("type") == "text":
-                        parts.append(str(block.get("text", "")))
-                text = "\n".join(parts).strip()
-                if text:
-                    return text
-    return (
-        "(No assistant text in this turn — the model may have only issued tool calls. "
-        "Enable tracing or check logs.)"
-    )
-
-
 def build_ui() -> None:
     st.set_page_config(page_title="TrustLayer — Betty, insurance broker", page_icon="✈️")
     st.title("TrustLayer — Betty, insurance broker")
@@ -135,7 +180,14 @@ def build_ui() -> None:
     if "chat_lines" not in st.session_state:
         st.session_state.chat_lines = []
 
+    st.session_state.chat_lines = [_normalize_chat_line(x) for x in st.session_state.chat_lines]
+
     agent, backend = st.session_state.agent_bundle
+
+    config = {
+        "configurable": {"thread_id": st.session_state.thread_id},
+        "recursion_limit": int(os.getenv("COVERPILOT_RECURSION_LIMIT", "25")),
+    }
 
     with st.sidebar:
         if st.button("New chat", use_container_width=True):
@@ -156,30 +208,35 @@ def build_ui() -> None:
             st.caption(st.session_state.thread_id)
             st.code(backend.snapshot_json(), language="json")
 
-    for role, text in st.session_state.chat_lines:
+    for role, text, reply_audio in st.session_state.chat_lines:
         with st.chat_message(role):
             st.markdown(text)
+            if role == "assistant" and reply_audio:
+                st.audio(reply_audio, format="audio/mpeg")
 
-    config = {
-        "configurable": {"thread_id": st.session_state.thread_id},
-        "recursion_limit": int(os.getenv("COVERPILOT_RECURSION_LIMIT", "25")),
-    }
+    voice_on = st.toggle("Voice", key="near_chat_voice")
+
+    if voice_on:
+        try:
+            from backend.services.elevenlabs_voice import elevenlabs_configured
+        except ImportError:
+            elevenlabs_configured = lambda: False  # type: ignore[misc, assignment]
+        if not elevenlabs_configured():
+            st.caption("Set `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` in `.env` for spoken replies.")
+        try:
+            components.html(_voice_embed_html(), height=340, scrolling=False)
+        except FileNotFoundError:
+            st.error("Voice embed template missing (`app/voice_embed.html`).")
 
     user_text = st.chat_input("Message Betty…")
     if user_text:
-        st.session_state.chat_lines.append(("user", user_text))
-        with st.spinner("Betty is thinking…"):
-            payload = user_text
-            if user_message_suggests_travel_planning(user_text):
-                crm = session_crm_context_block(session_default_customer_id=backend.session_customer_id)
-                if crm:
-                    payload = f"{crm}\n\n---\nTraveler message:\n{user_text}"
-            result = agent.invoke(
-                {"messages": [{"role": "user", "content": payload}]},
-                config=config,
-            )
-        reply = _extract_assistant_text(result)
-        st.session_state.chat_lines.append(("assistant", reply))
+        _run_betty_turn(
+            user_text,
+            agent=agent,
+            backend=backend,
+            config=config,
+            voice_mode=voice_on,
+        )
         st.rerun()
 
 
