@@ -1,2 +1,1 @@
-"""Service helpers for the CoverPilot MVP scaffold."""
-
+"""Service helpers for the TrustLayer MVP scaffold."""

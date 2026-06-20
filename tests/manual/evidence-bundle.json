@@ -1,7 +1,10 @@
 {
   "commit_hash": "3c7835960873223ddacdaf3fb3d180a4fae79c81",
-  "test_summary": "Local contract deploy path verified with `uv run scripts/deploy_insurance_manager.py local-test`. Live Base Sepolia policy state verified onchain and advanced to `PayoutPaid` for the named policy. Circle x402 payment submission succeeded against the live x402 Echo merchant on Base Sepolia, and the merchant refunded the test payment.",
-  "screenshots": [],
+  "run_id": "2026-06-20-live-demo",
+  "test_summary": "Local contract deploy path verified with `uv run scripts/deploy_insurance_manager.py local-test` on an ephemeral eth-tester chain. Live Base Sepolia policy state verified onchain and advanced to `PayoutPaid` for the named policy. Circle x402 payment submission succeeded against the live x402 Echo merchant on Base Sepolia after earlier public endpoint attempts failed with `HTTP 402 invalid_request`, and the merchant refunded the test payment.",
+  "screenshots": [
+    "tests/manual/screenshots/2026-06-20-live-demo-screenshot.png"
+  ],
   "logs": [
     "uv run scripts/deploy_insurance_manager.py local-test -> contract deployed locally at 0xf4c78D5953410EC1615501652f93727f7f5A709e",
     "circle wallet list --type agent --chain BASE -> agent wallet 0x9084a185b4c870321f261d12efb2305f8e3d4504",
@@ -18,9 +21,9 @@
     "0xf5ee7202a2c453ac4a8e7456931993c94464c34dca6070ae846335d7c9b0dd05"
   ],
   "receipt_references": [
-    "/root/.circle-cli/payments/payment-2026-06-20T01-25-48-798Z.json",
-    "/root/.circle-cli/payments/payment-2026-06-20T01-30-44-712Z.json",
-    "/root/.circle-cli/payments/payment-2026-06-20T01-31-09-575Z.json"
+    "tests/manual/receipts/payment-2026-06-20T01-25-48-798Z.json",
+    "tests/manual/receipts/payment-2026-06-20T01-30-44-712Z.json",
+    "tests/manual/receipts/payment-2026-06-20T01-31-09-575Z.json"
   ],
   "tx_hashes": [
     "080a4b9e84858a65e5e14448992f32c8c3fc006eed5c9de16f1f382ded91cf00",
@@ -52,9 +55,8 @@
     "test_usdc_payout_after_oracle_resolution": true
   },
   "notes": [
-    "The live Base Sepolia contract now reports policy status 5 (PayoutPaid) for coverpilot-live-policy-001.",
-    "The Circle CLI x402 attempts produced signed payment records, but the facilitator returned HTTP 402 invalid_request before a successful paid response was observed.",
-    "The persistent reminder to commit everything after ultragoal completion remains in .omx/notepad.md."
+    "The live Base Sepolia contract reported policy status 5 (PayoutPaid) for coverpilot-live-policy-001 during the final live run.",
+    "The Circle CLI x402 live run succeeded after first deploying the Base Sepolia agent wallet onchain with a zero-value self-transfer; the final paid response came back from the live x402 Echo merchant and was followed by an automatic refund."
   ],
   "x402_payment_receipt": {
     "network": "Base Sepolia",

@@ -44,8 +44,12 @@ from coverpilot_conversation.message_extract import (
 logger = logging.getLogger(__name__)
 
 
-def _betty_api_base() -> str:
+def _betty_public_api_base() -> str:
     return os.getenv("BETTY_PUBLIC_API_BASE", "http://127.0.0.1:8000").rstrip("/")
+
+
+def _betty_internal_api_base() -> str:
+    return os.getenv("BETTY_INTERNAL_API_BASE", _betty_public_api_base()).rstrip("/")
 
 
 def _sync_voice_ui_transcript() -> None:
@@ -55,7 +59,7 @@ def _sync_voice_ui_transcript() -> None:
         st.session_state["voice_ui_merged_count"] = 0
         st.session_state["_voice_ui_sync_tid"] = tid
     merged = int(st.session_state.get("voice_ui_merged_count", 0))
-    base = _betty_api_base()
+    base = _betty_internal_api_base()
     try:
         r = httpx.get(f"{base}/api/betty/voice-ui-transcript/{tid}", timeout=3.0)
         if r.status_code != 200:
@@ -110,7 +114,7 @@ def _voice_embed_html() -> str:
     boot = _chat_bootstrap_for_voice()
     boot_b64 = base64.b64encode(boot.encode("utf-8")).decode("ascii") if boot else ""
     return (
-        raw.replace("__BETTY_API_BASE__", _betty_api_base())
+        raw.replace("__BETTY_API_BASE__", _betty_public_api_base())
         .replace("__THREAD_ID__", st.session_state.thread_id)
         .replace("__CRM_ID__", html.escape(crm, quote=True))
         .replace("__BOOTSTRAP_B64__", boot_b64)

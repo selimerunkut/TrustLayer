@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-06-20T01:25:48.799Z",
+  "url": "https://word-counter.api.klymax402.com/api/count",
+  "method": "POST",
+  "address": "0x9084a185b4c870321f261d12efb2305f8e3d4504",
+  "blockchain": "BASE",
+  "payment": {
+    "amount": "$0.001 USDC",
+    "chain": "Base",
+    "scheme": "USD Coin",
+    "seller": "0x6E8B64638b24C6D625b045dD353120d850064E2E"
+  },
+  "paymentHeader": "eyJ4NDAyVmVyc2lvbiI6MiwicGF5bG9hZCI6eyJhdXRob3JpemF0aW9uIjp7ImZyb20iOiIweDkwODRhMTg1YjRjODcwMzIxZjI2MWQxMmVmYjIzMDVmOGUzZDQ1MDQiLCJ0byI6IjB4NkU4QjY0NjM4YjI0QzZENjI1YjA0NWREMzUzMTIwZDg1MDA2NEUyRSIsInZhbHVlIjoiMTAwMCIsInZhbGlkQWZ0ZXIiOiIxNzgxOTE4MTQ2IiwidmFsaWRCZWZvcmUiOiIxNzgxOTE5MDQ2Iiwibm9uY2UiOiIweGY1ZWU3MjAyYTJjNDUzYWM0YThlNzQ1NjkzMTk5M2M5NDQ2NGMzNGRjYTYwNzBhZTg0NjMzNWQ3YzliMGRkMDUifSwic2lnbmF0dXJlIjoiMHgwNzE5NWRlYTE4ZTZlMDEzMGJlZWI3ZDNkZGRhY2MyNTVmMWZiNzBhNWFiYWE5ZjQ1YjMwMjBhNDg2MjVlNWMxNzYxZDYyNTA3MzA5MzJmMTllNDNhNTZmMmE4NDI5MDEwNGE4YzNhZWFhODQ5NGNmMmUzYjYwZWRhMGY4MTg1NTFjIn0sImFjY2VwdGVkIjp7InNjaGVtZSI6ImV4YWN0IiwibmV0d29yayI6ImVpcDE1NTo4NDUzIiwiYW1vdW50IjoiMTAwMCIsImFzc2V0IjoiMHg4MzM1ODlmQ0Q2ZURiNkUwOGY0YzdDMzJENGY3MWI1NGJkQTAyOTEzIiwicGF5VG8iOiIweDZFOEI2NDYzOGIyNEM2RDYyNWIwNDVkRDM1MzEyMGQ4NTAwNjRFMkUiLCJtYXhUaW1lb3V0U2Vjb25kcyI6MzAwLCJleHRyYSI6eyJuYW1lIjoiVVNEIENvaW4iLCJ2ZXJzaW9uIjoiMiJ9fSwicmVzb3VyY2UiOnsidXJsIjoiaHR0cHM6Ly93b3JkLWNvdW50ZXIuYXBpLmtseW1heDQwMi5jb20vYXBpL2NvdW50IiwiZGVzY3JpcHRpb24iOiJDb3VudCB3b3JkcywgY2hhcmFjdGVycywgc2VudGVuY2VzLCBwYXJhZ3JhcGhzLCBhbmQgcmVhZGluZyB0aW1lIiwibWltZVR5cGUiOiJhcHBsaWNhdGlvbi9qc29uIn19",
+  "paymentPayload": {
+    "x402Version": 2,
+    "payload": {
+      "authorization": {
+        "from": "0x9084a185b4c870321f261d12efb2305f8e3d4504",
+        "to": "0x6E8B64638b24C6D625b045dD353120d850064E2E",
+        "value": "1000",
+        "validAfter": "1781918146",
+        "validBefore": "1781919046",
+        "nonce": "0xf5ee7202a2c453ac4a8e7456931993c94464c34dca6070ae846335d7c9b0dd05"
+      },
+      "signature": "0x07195dea18e6e0130beeb7d3dddacc255f1fb70a5abaa9f45b3020a48625e5c1761d6250730932f19e43a56f2a84290104a8c3aeaa8494cf2e3b60eda0f818551c"
+    },
+    "accepted": {
+      "scheme": "exact",
+      "network": "eip155:8453",
+      "amount": "1000",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "payTo": "0x6E8B64638b24C6D625b045dD353120d850064E2E",
+      "maxTimeoutSeconds": 300,
+      "extra": {
+        "name": "USD Coin",
+        "version": "2"
+      }
+    },
+    "resource": {
+      "url": "https://word-counter.api.klymax402.com/api/count",
+      "description": "Count words, characters, sentences, paragraphs, and reading time",
+      "mimeType": "application/json"
+    }
+  }
+}

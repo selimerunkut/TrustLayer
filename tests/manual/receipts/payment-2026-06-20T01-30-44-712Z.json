@@ -1,0 +1,95 @@
+{
+  "timestamp": "2026-06-20T01:30:44.712Z",
+  "url": "https://emc2ai.io/x402/bitquery/bagcheck/raw",
+  "method": "POST",
+  "address": "0x9084a185b4c870321f261d12efb2305f8e3d4504",
+  "blockchain": "BASE",
+  "payment": {
+    "amount": "$0.4 USDC",
+    "chain": "Base",
+    "scheme": "USD Coin",
+    "seller": "0xc9368b30BD620164FD1a05a5d99dcaf8Ae754775"
+  },
+  "paymentHeader": "eyJ4NDAyVmVyc2lvbiI6MiwicGF5bG9hZCI6eyJhdXRob3JpemF0aW9uIjp7ImZyb20iOiIweDkwODRhMTg1YjRjODcwMzIxZjI2MWQxMmVmYjIzMDVmOGUzZDQ1MDQiLCJ0byI6IjB4YzkzNjhiMzBCRDYyMDE2NEZEMWEwNWE1ZDk5ZGNhZjhBZTc1NDc3NSIsInZhbHVlIjoiNDAwMDAwIiwidmFsaWRBZnRlciI6IjE3ODE5MTg0NDIiLCJ2YWxpZEJlZm9yZSI6IjE3ODE5MTkxMzIiLCJub25jZSI6IjB4NzI3ZTU3ZWIzZDNkODA2Mjk0MGZmNzk2NTFhMjIxODIzZmExZmQyMWZiMWZkNzFjMjlmOTE3MzUzNDlmNjU1NiJ9LCJzaWduYXR1cmUiOiIweGMwZWE2M2ZjYjRkZmIwZWExNzAwZWNjOTEyNmE3MDU2Mzk4YWEwMjQwMjc1OTFmMzBlZTA5ZDVmZmY2MWIxZTc1OGJkZGRjNDRhZWVmYzY0ZjFlNjMzMjFkZjg2MDdhMGZhZDk2NGJiYzU4MmQ3MDNmNDUzMDBmODRjYjJkOTUyMWIifSwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMiLCJhbW91bnQiOiI0MDAwMDAiLCJtYXhBbW91bnRSZXF1aXJlZCI6IjQwMDAwMCIsInJlc291cmNlIjoiaHR0cHM6Ly9lbWMyYWkuaW8veDQwMi9iaXRxdWVyeS9iYWdjaGVjay9yYXciLCJkZXNjcmlwdGlvbiI6IkJhZyBjaGVjayAtIHRva2VuIGhvbGRlciBkaXN0cmlidXRpb24gd2l0aCBjb25jZW50cmF0aW9uIHJpc2sgbWV0cmljcy4iLCJtaW1lVHlwZSI6ImFwcGxpY2F0aW9uL2pzb24iLCJwYXlUbyI6IjB4YzkzNjhiMzBCRDYyMDE2NEZEMWEwNWE1ZDk5ZGNhZjhBZTc1NDc3NSIsIm1heFRpbWVvdXRTZWNvbmRzIjo5MCwiYXNzZXQiOiIweDgzMzU4OWZDRDZlRGI2RTA4ZjRjN0MzMkQ0ZjcxYjU0YmRBMDI5MTMiLCJkaXNjb3ZlcmFibGUiOnRydWUsIm91dHB1dFNjaGVtYSI6eyJpbnB1dCI6eyJ0eXBlIjoiaHR0cCIsIm1ldGhvZCI6IlBPU1QiLCJib2R5VHlwZSI6Impzb24iLCJib2R5RmllbGRzIjp7ImNoYWluIjp7InR5cGUiOiJzdHJpbmciLCJkZXNjcmlwdGlvbiI6IkJsb2NrY2hhaW4gdG8gcXVlcnkgKGUuZy4sIGJhc2UsIGV0aGVyZXVtLCBic2MsIHNvbGFuYSkiLCJlbnVtIjpbImJhc2UiLCJldGhlcmV1bSIsImJzYyIsImFyYml0cnVtIiwicG9seWdvbiIsIm9wdGltaXNtIiwic29sYW5hIl19LCJ0b2tlbkFkZHJlc3MiOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiVG9rZW4gY29udHJhY3QgYWRkcmVzcyAoZm9yIHRva2VuLXNwZWNpZmljIHF1ZXJpZXMpIn0sImxpbWl0Ijp7InR5cGUiOiJzdHJpbmciLCJkZXNjcmlwdGlvbiI6Ik1heGltdW0gbnVtYmVyIG9mIHJlc3VsdHMgdG8gcmV0dXJuIChkZWZhdWx0OiAxMCwgbWF4OiA1MDApIn19LCJkaXNjb3ZlcmFibGUiOnRydWV9LCJvdXRwdXQiOnsic3RhdHVzIjp7InR5cGUiOiJzdHJpbmciLCJkZXNjcmlwdGlvbiI6IlJlcXVlc3Qgc3RhdHVzIChjb21wbGV0ZWQgb3IgZXJyb3IpIn0sInJlc3VsdCI6eyJ0eXBlIjoib2JqZWN0IiwiZGVzY3JpcHRpb24iOiJRdWVyeSByZXN1bHQgZGF0YSJ9LCJwYXltZW50Ijp7InR5cGUiOiJvYmplY3QiLCJkZXNjcmlwdGlvbiI6IlBheW1lbnQgcmVjZWlwdCBpbmZvcm1hdGlvbiJ9fX0sImV4dHJhIjp7Im5hbWUiOiJVU0QgQ29pbiIsInZlcnNpb24iOiIyIn19LCJyZXNvdXJjZSI6eyJ1cmwiOiJodHRwczovL2VtYzJhaS5pby94NDAyL2JpdHF1ZXJ5L2JhZ2NoZWNrL3JhdyIsImRlc2NyaXB0aW9uIjoiQmFnIGNoZWNrIC0gdG9rZW4gaG9sZGVyIGRpc3RyaWJ1dGlvbiB3aXRoIGNvbmNlbnRyYXRpb24gcmlzayBtZXRyaWNzLiIsIm1pbWVUeXBlIjoiYXBwbGljYXRpb24vanNvbiJ9fQ==",
+  "paymentPayload": {
+    "x402Version": 2,
+    "payload": {
+      "authorization": {
+        "from": "0x9084a185b4c870321f261d12efb2305f8e3d4504",
+        "to": "0xc9368b30BD620164FD1a05a5d99dcaf8Ae754775",
+        "value": "400000",
+        "validAfter": "1781918442",
+        "validBefore": "1781919132",
+        "nonce": "0x727e57eb3d3d8062940ff79651a221823fa1fd21fb1fd71c29f91735349f6556"
+      },
+      "signature": "0xc0ea63fcb4dfb0ea1700ecc9126a7056398aa024027591f30ee09d5fff61b1e758bdddc44aeefc64f1e63321df8607a0fad964bbc582d703f45300f84cb2d9521b"
+    },
+    "accepted": {
+      "scheme": "exact",
+      "network": "eip155:8453",
+      "amount": "400000",
+      "maxAmountRequired": "400000",
+      "resource": "https://emc2ai.io/x402/bitquery/bagcheck/raw",
+      "description": "Bag check - token holder distribution with concentration risk metrics.",
+      "mimeType": "application/json",
+      "payTo": "0xc9368b30BD620164FD1a05a5d99dcaf8Ae754775",
+      "maxTimeoutSeconds": 90,
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "discoverable": true,
+      "outputSchema": {
+        "input": {
+          "type": "http",
+          "method": "POST",
+          "bodyType": "json",
+          "bodyFields": {
+            "chain": {
+              "type": "string",
+              "description": "Blockchain to query (e.g., base, ethereum, bsc, solana)",
+              "enum": [
+                "base",
+                "ethereum",
+                "bsc",
+                "arbitrum",
+                "polygon",
+                "optimism",
+                "solana"
+              ]
+            },
+            "tokenAddress": {
+              "type": "string",
+              "description": "Token contract address (for token-specific queries)"
+            },
+            "limit": {
+              "type": "string",
+              "description": "Maximum number of results to return (default: 10, max: 500)"
+            }
+          },
+          "discoverable": true
+        },
+        "output": {
+          "status": {
+            "type": "string",
+            "description": "Request status (completed or error)"
+          },
+          "result": {
+            "type": "object",
+            "description": "Query result data"
+          },
+          "payment": {
+            "type": "object",
+            "description": "Payment receipt information"
+          }
+        }
+      },
+      "extra": {
+        "name": "USD Coin",
+        "version": "2"
+      }
+    },
+    "resource": {
+      "url": "https://emc2ai.io/x402/bitquery/bagcheck/raw",
+      "description": "Bag check - token holder distribution with concentration risk metrics.",
+      "mimeType": "application/json"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Manual live testnet evidence bundle
 
-Use this directory to record the final live-path evidence required by the CoverPilot ultragoal.
+Use this directory to record the final live-path evidence required by the TrustLayer ultragoal.
 
 The live acceptance bundle should include:
 

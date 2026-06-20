@@ -23,6 +23,28 @@ from backend.services.session_mode import fallback_mode_label, preflight_session
 logger = logging.getLogger(__name__)
 
 
+def _git_sha() -> str:
+    git_sha = os.environ.get("TRUSTLAYER_GIT_SHA", "").strip()
+    if git_sha:
+        return git_sha
+    source_commit = os.environ.get("SOURCE_COMMIT", "").strip()
+    if source_commit:
+        return source_commit
+    return "unknown"
+
+
+def _cors_origins() -> list[str]:
+    configured = os.environ.get("TRUSTLAYER_CORS_ORIGINS", "").strip()
+    if configured:
+        origins = [origin.strip() for origin in configured.split(",") if origin.strip()]
+        if origins:
+            return origins
+    return [
+        "http://127.0.0.1:8501",
+        "http://localhost:8501",
+    ]
+
+
 def _store(app: FastAPI) -> MutableMapping[str, PolicyRecord]:
     if not hasattr(app.state, "policy_store"):
         app.state.policy_store = {}
@@ -98,11 +120,11 @@ def _guard_policy_write(app: FastAPI, request: PolicyWriteRequest, *, expected_s
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="CoverPilot API", version="0.1.0")
+    app = FastAPI(title="TrustLayer API", version="0.1.0")
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=_cors_origins(),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -112,6 +134,10 @@ def create_app() -> FastAPI:
     @app.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/version")
+    def version() -> dict[str, str]:
+        return {"git_sha": _git_sha()}
 
     @app.get("/mode/preflight")
     def preflight_mode() -> dict[str, str]:

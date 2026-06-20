@@ -1,6 +1,6 @@
-# CoverPilot — conversational broker (LangChain)
+# TrustLayer — conversational broker (LangChain)
 
-This folder contains a **minimal conversational AI slice** of CoverPilot: one **LangChain 1.x** broker agent (`create_agent`) with a **fixed tool set** and an **in-memory mock** for wallet / x402 / policy transitions. Use it to iterate on prompts and tool boundaries before wiring **FastAPI + Circle + Base**.
+This folder contains a **minimal conversational AI slice** of TrustLayer: one **LangChain 1.x** broker agent (`create_agent`) with a **fixed tool set** and an **in-memory mock** for wallet / x402 / policy transitions. Use it to iterate on prompts and tool boundaries before wiring **FastAPI + Circle + Base**.
 
 ## Voice later?
 
@@ -40,7 +40,7 @@ Optional observability (recommended in skills — `.agents/skills/ecosystem-prim
 ```bash
 export LANGSMITH_TRACING=true
 export LANGSMITH_API_KEY=...
-export LANGSMITH_PROJECT=coverpilot-conversation
+export LANGSMITH_PROJECT=trustlayer-conversation
 ```
 
 ## Run Streamlit
@@ -82,7 +82,7 @@ Development-time guidance (not loaded at runtime by the app):
 - `.agents/skills/langchain-fundamentals/SKILL.md` — `create_agent`, `@tool`, `MemorySaver`, `recursion_limit`.
 - `.agents/skills/langchain-middleware/SKILL.md` — when you add **HITL** around `purchase_policy` / `pay_knowledge_research_fee` for production.
 
-## Next integration steps (toward full CoverPilot)
+## Next integration steps (toward full TrustLayer)
 
 1. Move `build_broker_tools` implementations from `MockBrokerBackend` to **FastAPI** routes that validate Pydantic schemas, idempotency keys, and call **Circle + x402 + contract**.
 2. Keep **the same tool names and JSON shapes** so the broker prompt stays stable.

@@ -1,4 +1,4 @@
-# CoverPilot repo notes
+# TrustLayer repo notes
 
 This file is the durable scratchpad for repo-specific operating facts. Keep it
 short, current, and biased toward things future agents are likely to forget.
@@ -35,12 +35,7 @@ short, current, and biased toward things future agents are likely to forget.
   - `circle wallet login --request <request-id> --otp <code>`
   - `circle wallet list --type agent --chain BASE`
   - `circle wallet create --type agent`
-- Live-testnet learnings:
-  - `circle services pay` needs an on-chain agent wallet first; a zero-value Base Sepolia self-transfer successfully deployed the wallet before signing.
-  - The funded Base Sepolia agent wallet currently used for live evidence is `0x3cf96b11e9352d9653255d4f4fbd462db5a97d56`.
-  - A successful Base Sepolia x402 echo target is `https://x402.payai.network/api/base-sepolia/paid-content`.
-  - The live x402 Echo merchant refunds the test payment after a successful paid response, so it is a safe proof point for the payment path.
-  - The durable evidence bundle for the final live run lives in `tests/manual/evidence-bundle.json` and `tests/manual/live-demo-transcript.md`.
+- Treat the run-scoped evidence bundle as the authoritative home for live coordinates and receipts.
 
 ## Base Sepolia deployment
 
@@ -50,21 +45,13 @@ short, current, and biased toward things future agents are likely to forget.
   - generate the address locally
   - fund it with Base Sepolia test ETH
   - keep the private key only in local `.env`
+- Keep the live-testnet proof set in the run evidence bundle and transcript rather than in this scratchpad.
 - Current funded burner deployer:
   - `0xBA3330FB593dEb0203a5801B2E2f6f295f76FAd8`
-- `BASE_SEPOLIA_TEST_USDC_ADDRESS` is the Circle-documented Base Sepolia USDC
-  contract:
+- `BASE_SEPOLIA_TEST_USDC_ADDRESS`:
   - `0x036CbD53842c5426634e7929541eC2318f3dCF7e`
-- `BASE_SEPOLIA_CONTRACT_ADDRESS` is the address returned by deploying
-  `contracts/InsuranceManager.sol` on Base Sepolia.
-- Current Base Sepolia deployment result:
+- Current live contract / `BASE_SEPOLIA_CONTRACT_ADDRESS`:
   - `0xf4c78D5953410EC1615501652f93727f7f5A709e`
-- Current live contract:
-  - `0xf4c78D5953410EC1615501652f93727f7f5A709e`
-- Current live Base Sepolia x402 payment evidence:
-  - wallet deploy tx `0x45ce62c5035cb9d3bb730f51c1d435698ae21e1a8c3d5acd7ee31acaa28e1251`
-  - successful x402 payment tx `0x23f359f2ba32e8a3cf55fbbc959e3692733a728fe3ebf6b05d22d3c1e84007e5`
-  - refund tx `0xc71db85f3099bc36d5eda79cc82ebd061b8565f75862cf01a74f934b78e56fe2`
 
 ## Live-demo gates
 
@@ -77,6 +64,19 @@ short, current, and biased toward things future agents are likely to forget.
   - `BASE_SEPOLIA_DEPLOYER_PRIVATE_KEY`
   - `ORACLE_PRIVILEGED_TOKEN`
 - Keep real secrets in local `.env`; do not commit them.
+
+## Coolify deployment
+
+- Local Coolify dashboard: `http://37.27.94.136:8000`
+- Local infra docs live in `/opt/infra`
+- For local Coolify deployments, use an `sslip.io` hostname for public reachability
+  (for example `trustlayer.37-27-94-136.sslip.io`).
+- Coolify deploy-only API token for TrustLayer automation lives in
+  `/opt/infra/.env` as `COOLIFY_API_KEY`; do not copy the secret into the repo.
+- Prepared Coolify deploy key UUID for the private GitHub repo:
+  `xjsn8p86itmml1m92atodu1h`
+- Add TrustLayer deployment notes under `/opt/infra/docs/` when updating the
+  infra playbook.
 
 ## Repo conventions learned so far
 
