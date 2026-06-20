@@ -168,6 +168,18 @@ class MockBrokerBackend:
     def pay_knowledge_service(self, draft_id: str) -> dict[str, Any]:
         """Debit the research/knowledge fee (mock). Invoked by the ``pay_knowledge_research_fee`` tool."""
         d = self._require_draft(draft_id)
+        # Idempotent: ``get_policy_recommendation`` may already have called this via the
+        # demo coalesce path; the LLM often still invokes ``pay_knowledge_research_fee`` afterward.
+        if d.status in (DraftStatus.RESEARCH_PAID, DraftStatus.RECOMMENDED, DraftStatus.PURCHASED):
+            if not d.x402_receipt:
+                raise ValueError("Research fee receipt missing for this draft; cannot verify payment state.")
+            return {
+                "policy_draft_id": d.draft_id,
+                "paid_usdc": d.research_fee_usdc,
+                "x402_receipt": d.x402_receipt,
+                "broker_wallet_after_usdc": round(self.broker_wallet_usdc, 2),
+                "note": "Research fee was already applied for this draft (idempotent).",
+            }
         # Demo resilience: the LLM often obtains a spoken "yes" but skips
         # ``confirm_budget_authorization`` before ``pay_knowledge_research_fee``.
         # ``pay_knowledge_research_fee`` only runs after ``customer_confirms_research_fee=True``,
@@ -175,6 +187,8 @@ class MockBrokerBackend:
         if d.status == DraftStatus.BUDGET_PREPARED:
             d.status = DraftStatus.AUTHORIZED
         elif d.status != DraftStatus.AUTHORIZED:
+            if d.status == DraftStatus.REJECTED:
+                raise ValueError("Draft was rejected; cannot pay the knowledge research fee.")
             raise ValueError("Cannot pay knowledge service unless budget is authorized.")
         fee = d.research_fee_usdc
         if self.broker_wallet_usdc < fee:
