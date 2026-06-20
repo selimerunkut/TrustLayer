@@ -13,11 +13,12 @@ from __future__ import annotations
 
 import json
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from langchain_core.tools import tool
 
 from coverpilot_conversation.customer_directory import resolve_customer
+from coverpilot_conversation.trip_intake_gap import ForStep, evaluate_trip_intake
 
 if TYPE_CHECKING:
     from coverpilot_conversation.mock_backend import MockBrokerBackend
@@ -62,6 +63,60 @@ def build_broker_tools(backend: MockBrokerBackend) -> list:
         return json.dumps(out)
 
     @tool
+    def trip_intake_gap_check(
+        for_step: str,
+        depart_from: str = "",
+        arrive_to: str = "",
+        travel_dates: str = "",
+        airlines_routes_layovers: str = "",
+        travelers: str = "",
+        worries_delay_cancel: str = "",
+        max_budget_usdc_hint: str = "",
+    ) -> str:
+        """Structured intake check before ``policy_research`` or ``prepare_budget_authorization``.
+
+        Call **after** ``lookup_customer_profile`` when the traveler wants a quote or KB help.
+        Pass **empty strings** for anything not yet known. Copy facts verbatim from the thread or CRM JSON
+        (e.g. put ``usual_coverage_budget_usdc`` into ``max_budget_usdc_hint`` as ``"45"`` when preparing budget).
+
+        If ``ready`` is false: ask **only** ``primary_question`` in natural language (one question) and
+        **do not** call ``policy_research`` or ``prepare_budget_authorization`` yet for that step.
+
+        If ``ready`` is true: proceed to call the target tool in the same assistant turn when appropriate.
+
+        Args:
+            for_step: ``policy_research`` or ``prepare_budget_authorization``.
+            depart_from: Home / origin city or airport if stated.
+            arrive_to: Destination city, airport, or at least country if that's all they gave.
+            travel_dates: Outbound/return or rough window.
+            airlines_routes_layovers: Carriers, flight numbers, layovers if stated.
+            travelers: Party size if stated (optional for policy_research).
+            worries_delay_cancel: Delay / cancel / connection fears in their words (required for policy step).
+            max_budget_usdc_hint: Any string containing digits for USDC cap (required for prepare_budget step).
+        """
+        allowed = frozenset({"policy_research", "prepare_budget_authorization"})
+        if for_step not in allowed:
+            return json.dumps(
+                {
+                    "error": "invalid_for_step",
+                    "for_step": for_step,
+                    "allowed": sorted(allowed),
+                    "ready": False,
+                }
+            )
+        payload = evaluate_trip_intake(
+            cast(ForStep, for_step),
+            depart_from,
+            arrive_to,
+            travel_dates,
+            airlines_routes_layovers,
+            travelers,
+            worries_delay_cancel,
+            max_budget_usdc_hint,
+        )
+        return json.dumps(payload, ensure_ascii=False)
+
+    @tool
     def policy_research(trip_digest: str) -> str:
         """TrustLayer internal KB consult before any budget lock (ideas.md journey).
 
@@ -69,9 +124,11 @@ def build_broker_tools(backend: MockBrokerBackend) -> list:
         ``prepare_budget_authorization`` raises ``ValueError`` — explaining regulations in chat
         does **not** set this flag. You must invoke this tool.
 
-        Run as soon as the trip is identifiable (cities, legs, layovers, fears). If airline names
-        or dates are missing, still call with the best narrative you can build from the thread, then
-        ask one follow-up in natural language — **do not** skip this tool to go straight to budget prep.
+        Prefer ``trip_intake_gap_check(for_step="policy_research", ...)`` first when you might be
+        missing origin, dates, or stated worries — if ``ready`` is false, ask the user before calling this.
+
+        Once intake is ready (or the user insists and you have a defensible digest), call with a single
+        rich ``trip_digest`` string; do not skip this tool to go straight to budget prep.
 
         Loads ``KB/flight_attributes.md`` and returns excerpts, ``mock_subtool_trace``, and narration hints.
 
@@ -110,6 +167,9 @@ def build_broker_tools(backend: MockBrokerBackend) -> list:
         session first; otherwise the backend raises ``ValueError`` (TrustLayer workflow). If the user
         just agreed to proceed and you only talked about rules in prose, call ``policy_research`` now
         with a full digest from the thread, then call this tool.
+
+        Prefer ``trip_intake_gap_check(for_step="prepare_budget_authorization", ...)`` immediately before
+        this call; if ``ready`` is false, ask ``primary_question`` and do not prepare yet.
 
         Call after a clear numeric max budget in USDC and a short trip summary. Does NOT spend funds yet.
         Next step is ``confirm_budget_authorization``.
@@ -324,6 +384,7 @@ def build_broker_tools(backend: MockBrokerBackend) -> list:
 
     return [
         lookup_customer_profile,
+        trip_intake_gap_check,
         policy_research,
         get_wallet_balance,
         prepare_budget_authorization,
