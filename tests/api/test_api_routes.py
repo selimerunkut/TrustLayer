@@ -31,6 +31,8 @@ def test_api_routes_support_the_core_money_movement_flow(monkeypatch):
     )
     assert rec.status_code == 200
     assert rec.json()["policy_name"] == "Flight Delay Guard"
+    assert rec.json()["premium_usdc"] == 1.0
+    assert rec.json()["payout_usdc"] == 300.0
 
     policy = {
         "policy": {
