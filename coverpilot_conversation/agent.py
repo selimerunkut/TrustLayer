@@ -22,8 +22,8 @@ from coverpilot_conversation.tools import build_broker_tools
 
 def _default_model() -> ChatOpenAI:
     model_name = os.getenv("COVERPILOT_CHAT_MODEL", "gpt-4o-mini")
-    max_tokens = int(os.getenv("COVERPILOT_MAX_OUTPUT_TOKENS", "420"))
-    return ChatOpenAI(model=model_name, temperature=0.2, max_tokens=max(200, max_tokens))
+    max_tokens = int(os.getenv("COVERPILOT_MAX_OUTPUT_TOKENS", "800"))
+    return ChatOpenAI(model=model_name, temperature=0.7, max_tokens=max(200, max_tokens))
 
 
 def build_broker_agent(
