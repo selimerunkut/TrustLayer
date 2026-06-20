@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from backend.services.receipts import research_fee_usdc
+
 
 class DraftStatus(str, Enum):
     BUDGET_PREPARED = "budget_prepared"
@@ -49,9 +51,8 @@ class MockBrokerBackend:
         return d
 
     def research_allowance_usdc(self, max_budget_usdc: float) -> float:
-        """1–5% of max budget, clamped to [1, 5] USDC (demo rule from product spec)."""
-        raw = max_budget_usdc * 0.03
-        return max(1.0, min(5.0, round(raw, 2)))
+        """Same bands as `backend.services.receipts.research_fee_usdc` (single source of truth)."""
+        return research_fee_usdc(max_budget_usdc)
 
     def prepare_budget_authorization(self, max_budget_usdc: float, trip_summary: str) -> PolicyDraft:
         if max_budget_usdc <= 0:

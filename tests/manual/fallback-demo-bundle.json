@@ -1,0 +1,36 @@
+{
+  "bundle_type": "fallback-demo",
+  "commit_hash": "bcd621c4197d0ca65d93acc4f7cefe1ec720a2f6",
+  "test_summary": "uv run pytest -q tests/contract tests/api tests/agent tests/security tests/observability tests/e2e -> 6 passed, 1 warning; individual suites also passed.",
+  "smoke_summary": {
+    "backend_health": "GET /health -> 200 {\"status\":\"ok\"}",
+    "backend_preflight": "GET /mode/preflight -> 200 {\"session_mode\":\"DEGRADED\",\"fallback_mode\":\"degraded\"}",
+    "streamlit_shell": "GET / -> 200 Streamlit shell responded on port 8502."
+  },
+  "screenshots": [],
+  "logs": [
+    "uvicorn: Application startup complete on 127.0.0.1:8010",
+    "uvicorn: GET /health -> 200 OK",
+    "uvicorn: GET /mode/preflight -> 200 OK",
+    "streamlit: You can now view your Streamlit app in your browser."
+  ],
+  "policy_ids": [],
+  "idempotency_keys": [],
+  "receipt_references": [],
+  "tx_hashes": [],
+  "contract_address": "",
+  "fallback_mode": true,
+  "demo_transcript": "Operator opens the app shell, confirms the non-insurance disclaimer, verifies the backend preflight is DEGRADED, and stops before any live settlement claims. This is a fallback/demo-only run.",
+  "base_policy_created": {},
+  "claim_payout_receipt": {},
+  "live_requirements": {
+    "circle_x402_payment": false,
+    "base_sepolia_policy_creation": false,
+    "test_usdc_payout_after_oracle_resolution": false
+  },
+  "notes": [
+    "This bundle is explicitly fallback/demo-only and must not be confused with live settlement evidence.",
+    "Backend smoke used uvicorn backend.main:app on 127.0.0.1:8010.",
+    "Streamlit smoke used streamlit run app/streamlit_app.py on 127.0.0.1:8502."
+  ]
+}

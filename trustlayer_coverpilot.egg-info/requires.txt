@@ -1,0 +1,13 @@
+fastapi<1,>=0.115
+streamlit<2,>=1.36
+pydantic<3,>=2.8
+uvicorn[standard]<1,>=0.30
+langchain<2,>=1
+langchain-core<2,>=1
+langchain-openai<2,>=0.3
+langgraph<2,>=1
+langsmith<1,>=0.3
+python-dotenv<2,>=1
+
+[dev]
+pytest<9,>=8
