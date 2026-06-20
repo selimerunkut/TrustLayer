@@ -121,9 +121,10 @@ def test_live_transactions_parses_circle_response(monkeypatch):
     mock_resp.raise_for_status.return_value = None
     mock_resp.json.return_value = TRANSACTIONS_PAYLOAD
 
-    with patch("backend.services.circle_wallet.httpx.Client") as client_cls:
-        client_cls.return_value.__enter__.return_value.get.return_value = mock_resp
-        result = fetch_wallet_transactions(limit=10)
+    with patch("backend.services.circle_wallet.fetch_onchain_wallet_activity", return_value=[]):
+        with patch("backend.services.circle_wallet.httpx.Client") as client_cls:
+            client_cls.return_value.__enter__.return_value.get.return_value = mock_resp
+            result = fetch_wallet_transactions(limit=10)
 
     assert result.simulated is False
     assert len(result.transactions) == 1
@@ -204,9 +205,10 @@ def test_live_transactions_from_circle_cli_for_agent_wallet(monkeypatch):
     completed.stdout = json.dumps(cli_payload)
     completed.stderr = ""
 
-    with patch("backend.services.circle_wallet.shutil.which", return_value="/usr/local/bin/circle"):
-        with patch("backend.services.circle_wallet.subprocess.run", return_value=completed) as run:
-            result = fetch_wallet_transactions(limit=5)
+    with patch("backend.services.circle_wallet.fetch_onchain_wallet_activity", return_value=[]):
+        with patch("backend.services.circle_wallet.shutil.which", return_value="/usr/local/bin/circle"):
+            with patch("backend.services.circle_wallet.subprocess.run", return_value=completed) as run:
+                result = fetch_wallet_transactions(limit=5)
 
     assert result.provenance == "circle:cli"
     assert len(result.transactions) == 1
