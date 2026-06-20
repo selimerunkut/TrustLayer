@@ -1,2 +1,2 @@
-"""Backend package for the CoverPilot MVP scaffold."""
+"""Backend package for the TrustLayer MVP scaffold."""
 

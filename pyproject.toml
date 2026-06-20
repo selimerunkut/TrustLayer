@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "trustlayer-coverpilot"
+name = "trustlayer"
 version = "0.1.0"
-description = "CoverPilot MVP scaffold for the ultragoal plan"
+description = "TrustLayer MVP scaffold for the ultragoal plan"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

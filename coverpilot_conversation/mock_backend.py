@@ -1,6 +1,6 @@
 """In-memory mock for broker wallet, policy drafts, and knowledge service (hackathon demo).
 
-Real CoverPilot will move this logic behind FastAPI + Circle + x402 + contracts.
+Real TrustLayer will move this logic behind FastAPI + Circle + x402 + contracts.
 """
 
 from __future__ import annotations
