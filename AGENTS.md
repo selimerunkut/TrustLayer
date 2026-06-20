@@ -26,10 +26,13 @@ short, current, and biased toward things future agents are likely to forget.
 
 - This repo is wired for the **Circle Agent Wallet / x402** path.
 - `CIRCLE_API_KEY` comes from the Circle Console.
-- `CIRCLE_WALLET_ID` comes from the Circle wallet / agent-wallet flow.
+- `CIRCLE_WALLET_ID` is the Circle wallet identifier string from the agent-wallet flow
+  (for example `VDW-135052`), not the blockchain address.
 - Circle CLI is installed as `@circle-fin/cli`.
 - Useful commands:
   - `circle wallet login you@example.com`
+  - `circle wallet login se@cypherx.tech --type agent --testnet --init`
+  - `circle wallet login --request <request-id> --otp <code>`
   - `circle wallet list --type agent --chain BASE`
   - `circle wallet create --type agent`
 
