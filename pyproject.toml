@@ -14,6 +14,11 @@ dependencies = [
   "pydantic>=2.8,<3",
   "uvicorn[standard]>=0.30,<1",
   "langchain>=1,<2",
+  "web3>=7,<8",
+  "py-solc-x>=2,<3",
+  "python-dotenv>=1,<2",
+  "eth-tester==0.13.0b1",
+  "py-evm==0.12.1b1",
 ]
 
 [project.optional-dependencies]
