@@ -8,11 +8,12 @@ APPROVED_BROKER_TOOL_NAMES = (
     "prepare_budget_authorization",
     "confirm_budget_authorization",
     "get_research_allowance",
-    "pay_knowledge_service",
+    "pay_knowledge_research_fee",
     "get_policy_recommendation",
     "purchase_policy",
     "reject_policy",
     "get_policy_status",
+    "get_policy_onchain",
 )
 
 FORBIDDEN_BROKER_TOOL_NAMES = {"oracle", "submit_oracle_resolution"}

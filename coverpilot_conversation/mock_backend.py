@@ -49,11 +49,58 @@ class MockBrokerBackend:
     def mark_policy_research_done(self) -> None:
         self.policy_research_completed = True
 
+    def _resolve_draft_id(self, draft_id: str) -> str:
+        """Map a requested id to a real draft key.
+
+        The LLM often hallucinates placeholders (e.g. ``draft-id-1``) because chat
+        transcripts omit tool JSON. If there is exactly one draft in the session,
+        use it; otherwise the caller must pass the exact ``policy_draft_id`` from
+        ``prepare_budget_authorization``.
+        """
+        key = (draft_id or "").strip()
+        if key in self.drafts:
+            return key
+        if not self.drafts:
+            raise ValueError(
+                f"Unknown policy_draft_id: {draft_id!r} (no drafts in session; "
+                "call prepare_budget_authorization first)."
+            )
+        if len(self.drafts) == 1:
+            return next(iter(self.drafts.keys()))
+        known = ", ".join(sorted(self.drafts.keys()))
+        raise ValueError(
+            f"Unknown policy_draft_id: {draft_id!r}. Known drafts: {known}. "
+            "Copy policy_draft_id exactly from the prepare_budget_authorization tool output."
+        )
+
+    def active_draft_context_block(self) -> str | None:
+        """Text to inject into the user message so the model sees real draft ids.
+
+        Streamlit/voice only pass human and assistant *text* to the model, not prior
+        tool results — without this, the model invents ``draft-id-1`` style placeholders.
+        """
+        if not self.drafts:
+            return None
+        if len(self.drafts) == 1:
+            d = next(iter(self.drafts.values()))
+            return (
+                "[TrustLayer session — active policy draft; use this id in tools verbatim]\n"
+                f"policy_draft_id: {d.draft_id}\n"
+                f"draft_status: {d.status.value}\n"
+                "Do not invent ids (never use draft-id-1 or placeholders)."
+            )
+        lines = "\n".join(
+            f"- {d.draft_id} (status={d.status.value})" for d in sorted(self.drafts.values(), key=lambda x: x.draft_id)
+        )
+        return (
+            "[TrustLayer session — multiple policy drafts; pick the id that matches the current step]\n"
+            f"{lines}\n"
+            "Copy a policy_draft_id exactly from this list."
+        )
+
     def _require_draft(self, draft_id: str) -> PolicyDraft:
-        d = self.drafts.get(draft_id)
-        if not d:
-            raise ValueError(f"Unknown policy_draft_id: {draft_id}")
-        return d
+        resolved = self._resolve_draft_id(draft_id)
+        return self.drafts[resolved]
 
     def research_allowance_usdc(self, max_budget_usdc: float) -> float:
         """Same bands as `backend.services.receipts.research_fee_usdc` (single source of truth)."""
@@ -107,8 +154,15 @@ class MockBrokerBackend:
         }
 
     def pay_knowledge_service(self, draft_id: str) -> dict[str, Any]:
+        """Debit the research/knowledge fee (mock). Invoked by the ``pay_knowledge_research_fee`` tool."""
         d = self._require_draft(draft_id)
-        if d.status != DraftStatus.AUTHORIZED:
+        # Demo resilience: the LLM often obtains a spoken "yes" but skips
+        # ``confirm_budget_authorization`` before ``pay_knowledge_research_fee``.
+        # ``pay_knowledge_research_fee`` only runs after ``customer_confirms_research_fee=True``,
+        # so treating BUDGET_PREPARED as authorized here matches traveler intent.
+        if d.status == DraftStatus.BUDGET_PREPARED:
+            d.status = DraftStatus.AUTHORIZED
+        elif d.status != DraftStatus.AUTHORIZED:
             raise ValueError("Cannot pay knowledge service unless budget is authorized.")
         fee = d.research_fee_usdc
         if self.broker_wallet_usdc < fee:
