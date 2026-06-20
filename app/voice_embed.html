@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    :root { --text: #f0f4ff; --muted: #9aa4bf; --danger: #f87171; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; color: var(--text); background: transparent; }
+    .wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 2px 0 4px; }
+    .status { font-size: 0.78rem; color: var(--muted); text-align: center; min-height: 1.15em; max-width: 100%; }
+    .status strong { color: var(--text); }
+    .btn-ptt {
+      width: 100%;
+      max-width: 280px;
+      min-height: 48px;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      background: linear-gradient(180deg, #334155, #1e293b);
+      color: #f8fafc;
+      border: 2px solid rgba(255,255,255,0.12);
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: pointer;
+    }
+    .btn-ptt:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-ptt:not(:disabled):active, .btn-ptt.is-pressed {
+      background: linear-gradient(180deg, #166534, #14532d);
+      border-color: rgba(34, 197, 94, 0.55);
+      box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+    }
+    .err { color: var(--danger); font-size: 0.72rem; margin-top: 2px; text-align: center; max-width: 280px; }
+    #crm { display: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="status" id="status"><strong>Hold to speak</strong> — press while Betty talks to stop her instantly.</div>
+    <button id="btnPtt" type="button" class="btn-ptt">Hold to speak</button>
+    <input id="crm" type="text" value="" />
+  </div>
+  <p class="err" id="err" style="display:none;"></p>
+
+  <div id="voice-boot" style="display:none">__BOOTSTRAP_B64__</div>
+
+  <script>
+    const API_BASE = "__BETTY_API_BASE__";
+    const threadId = "__THREAD_ID__";
+    const _bootB64 = document.getElementById("voice-boot").textContent.trim();
+    const CHAT_TRANSCRIPT_FOR_VOICE = _bootB64 ? (() => {
+      try {
+        const bin = atob(_bootB64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return new TextDecoder("utf-8").decode(bytes);
+      } catch (e) { return ""; }
+    })() : "";
+    const crmInput = document.getElementById("crm");
+    crmInput.value = "__CRM_ID__";
+
+    const status = document.getElementById("status");
+    const btnPtt = document.getElementById("btnPtt");
+    const errEl = document.getElementById("err");
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let pttActive = false;
+    let sessionBusy = false;
+    let speechBuffer = "";
+    let playbackAudio = null;
+    let turnAbort = null;
+    let bootstrapSent = false;
+    let lastSentNorm = "";
+    let lastSentAt = 0;
+
+    btnPtt.disabled = !SpeechRecognition;
+
+    function setErr(msg) {
+      if (!msg) { errEl.style.display = "none"; errEl.textContent = ""; return; }
+      errEl.style.display = "block";
+      errEl.textContent = msg;
+    }
+    function setStatus(html) { status.innerHTML = html; }
+
+    function escapeHtml(s) {
+      const d = document.createElement("div");
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    function detailMessage(data) {
+      const d = data && data.detail;
+      if (typeof d === "string") return d;
+      if (d && typeof d === "object" && d.message) return d.message;
+      if (Array.isArray(d)) return d.map((x) => x.msg || JSON.stringify(x)).join("; ");
+      return "Request failed";
+    }
+
+    function stopPlaybackOnly() {
+      if (playbackAudio) {
+        try {
+          playbackAudio.pause();
+          playbackAudio.currentTime = 0;
+          playbackAudio.onended = null;
+          playbackAudio.onerror = null;
+        } catch (e) {}
+        playbackAudio = null;
+      }
+    }
+
+    function interruptTurn() {
+      stopPlaybackOnly();
+      if (turnAbort) {
+        try { turnAbort.abort(); } catch (e) {}
+        turnAbort = null;
+      }
+      sessionBusy = false;
+      speechBuffer = "";
+      if (pttActive) endPttHold(true);
+    }
+
+    function shouldSkipNearDuplicate(t) {
+      const n = t.toLowerCase().replace(/\s+/g, " ").trim();
+      if (n.length < 2) return true;
+      const now = Date.now();
+      if (n === lastSentNorm && now - lastSentAt < 5000) return true;
+      lastSentNorm = n;
+      lastSentAt = now;
+      return false;
+    }
+
+    function initRecognition() {
+      if (recognition || !SpeechRecognition) return;
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = navigator.language || "en-US";
+      recognition.onresult = onSpeechResult;
+      recognition.onerror = (ev) => {
+        if (ev.error === "not-allowed") setErr("Mic denied — allow microphone for this site.");
+        else if (ev.error === "no-speech") { /* short tap */ }
+        else if (ev.error !== "aborted") setErr(ev.error);
+      };
+      recognition.onend = onRecognitionEnd;
+    }
+
+    async function sendUtterance(text) {
+      const t = text.trim();
+      if (!t || sessionBusy) return;
+      if (shouldSkipNearDuplicate(t)) return;
+
+      interruptTurn();
+      const ac = new AbortController();
+      turnAbort = ac;
+      sessionBusy = true;
+      speechBuffer = "";
+
+      setStatus("<strong>Betty</strong> is thinking…");
+
+      try {
+        const body = {
+          thread_id: threadId,
+          message: t,
+          crm_customer_id: (crmInput.value || "vasiliy").trim(),
+        };
+        if (!bootstrapSent && CHAT_TRANSCRIPT_FOR_VOICE && CHAT_TRANSCRIPT_FOR_VOICE.length > 0) {
+          body.conversation_bootstrap = CHAT_TRANSCRIPT_FOR_VOICE;
+          bootstrapSent = true;
+        }
+
+        const r = await fetch(API_BASE + "/api/betty/voice-chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: ac.signal,
+        });
+        const data = await r.json().catch(() => ({}));
+        if (ac.signal.aborted) return;
+        if (!r.ok) throw new Error(detailMessage(data));
+        const reply = data.reply || "";
+
+        try {
+          await fetch(API_BASE + "/api/betty/voice-ui-turn", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ thread_id: threadId, user: t, assistant: reply }),
+          });
+        } catch (_) { /* Streamlit will still sync on next poll */ }
+
+        setStatus("<strong>Betty</strong> is speaking…");
+
+        const tr = await fetch(API_BASE + "/api/betty/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: reply }),
+          signal: ac.signal,
+        });
+        if (ac.signal.aborted) return;
+        if (!tr.ok) {
+          const err = await tr.json().catch(() => ({}));
+          throw new Error(detailMessage(err));
+        }
+        const blob = await tr.blob();
+        if (ac.signal.aborted) return;
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        playbackAudio = audio;
+        await new Promise((resolve, reject) => {
+          const onAbort = () => {
+            audio.pause();
+            reject(new DOMException("Aborted", "AbortError"));
+          };
+          ac.signal.addEventListener("abort", onAbort, { once: true });
+          audio.onended = () => {
+            ac.signal.removeEventListener("abort", onAbort);
+            URL.revokeObjectURL(url);
+            playbackAudio = null;
+            resolve();
+          };
+          audio.onerror = () => {
+            ac.signal.removeEventListener("abort", onAbort);
+            reject(new Error("audio playback error"));
+          };
+          audio.play().catch(reject);
+        });
+      } catch (e) {
+        if (e.name === "AbortError") {
+          setErr("");
+        } else {
+          setErr(String(e.message || e));
+        }
+      } finally {
+        if (turnAbort === ac) turnAbort = null;
+        sessionBusy = false;
+        setErr("");
+        if (!pttActive) {
+          setStatus("<strong>Hold to speak</strong> — press during Betty&rsquo;s reply to stop her instantly.");
+        }
+      }
+    }
+
+    function onSpeechResult(event) {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const res = event.results[i];
+        const txt = res[0].transcript;
+        if (res.isFinal) speechBuffer += " " + txt;
+        else interim += txt;
+      }
+      const tail = interim.trim() ? " — " + escapeHtml(interim.trim()) : "";
+      if (pttActive) setStatus("<strong>Listening</strong>" + tail);
+    }
+
+    function onRecognitionEnd() {
+      if (pttActive) {
+        try { recognition.start(); } catch (e) {
+          pttActive = false;
+          btnPtt.classList.remove("is-pressed");
+          setErr("Could not keep mic open.");
+        }
+        return;
+      }
+      setTimeout(() => {
+        const chunk = speechBuffer.trim();
+        speechBuffer = "";
+        if (chunk && !sessionBusy) sendUtterance(chunk);
+        if (!sessionBusy) {
+          setStatus("<strong>Hold to speak</strong> — press during Betty&rsquo;s reply to stop her instantly.");
+        }
+      }, 60);
+    }
+
+    function beginPttHold(e) {
+      if (!SpeechRecognition) {
+        setErr("Use Chrome or Edge for voice.");
+        return;
+      }
+      initRecognition();
+      if (!recognition) return;
+
+      if (sessionBusy) interruptTurn();
+
+      if (pttActive) return;
+      pttActive = true;
+      speechBuffer = "";
+      btnPtt.classList.add("is-pressed");
+      setStatus("<strong>Listening</strong> — release when done");
+      try {
+        if (e && typeof e.pointerId === "number") btnPtt.setPointerCapture(e.pointerId);
+      } catch (err) {}
+      try {
+        recognition.start();
+      } catch (err) {
+        pttActive = false;
+        btnPtt.classList.remove("is-pressed");
+        setErr(String(err.message || err));
+        setStatus("<strong>Hold to speak</strong> — press during Betty&rsquo;s reply to stop her instantly.");
+      }
+    }
+
+    function endPttHold(requestStop) {
+      if (!pttActive) return;
+      pttActive = false;
+      btnPtt.classList.remove("is-pressed");
+      if (requestStop !== false && recognition) {
+        try { recognition.stop(); } catch (err) {}
+      }
+      if (!sessionBusy) {
+        setStatus("<strong>Hold to speak</strong> — press during Betty&rsquo;s reply to stop her instantly.");
+      }
+    }
+
+    btnPtt.addEventListener("pointerdown", (e) => {
+      if (btnPtt.disabled) return;
+      e.preventDefault();
+      beginPttHold(e);
+    });
+    btnPtt.addEventListener("pointerup", (e) => {
+      e.preventDefault();
+      try {
+        if (typeof e.pointerId === "number") btnPtt.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+      endPttHold(true);
+    });
+    btnPtt.addEventListener("pointercancel", (e) => {
+      e.preventDefault();
+      try {
+        if (typeof e.pointerId === "number") btnPtt.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+      endPttHold(true);
+    });
+  </script>
+</body>
+</html>

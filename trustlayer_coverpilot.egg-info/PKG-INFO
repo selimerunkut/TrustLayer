@@ -1,3 +1,27 @@
+Metadata-Version: 2.4
+Name: trustlayer-coverpilot
+Version: 0.1.0
+Summary: CoverPilot MVP scaffold for the ultragoal plan
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi<1,>=0.115
+Requires-Dist: streamlit<2,>=1.40
+Requires-Dist: pydantic<3,>=2.8
+Requires-Dist: uvicorn[standard]<1,>=0.30
+Requires-Dist: langchain<2,>=1
+Requires-Dist: langchain-core<2,>=1
+Requires-Dist: langchain-openai<2,>=0.3
+Requires-Dist: langgraph<2,>=1
+Requires-Dist: langsmith<1,>=0.3
+Requires-Dist: python-dotenv<2,>=1
+Requires-Dist: httpx<1,>=0.27
+Requires-Dist: web3<8,>=7
+Requires-Dist: py-solc-x<3,>=2
+Requires-Dist: eth-tester==0.13.0b1
+Requires-Dist: py-evm==0.12.1b1
+Provides-Extra: dev
+Requires-Dist: pytest<9,>=8; extra == "dev"
+
 # CoverPilot MVP
 
 This repository is being scaffolded to match the approved ultragoal plan:
@@ -35,22 +59,7 @@ uv run uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 
 Streamlit hosts **Betty** (TrustLayer broker): set `OPENAI_API_KEY` in `.env` (see `.env.example`). The same `coverpilot_conversation` tools and prompts power the chat; the mock broker uses the same research-fee bands as `backend.services.receipts`.
 
-**Voice:** The **Hold to speak** control is always shown under the chat. It calls FastAPI (`uvicorn backend.main:app` on port **8000** by default). Run the API in a second terminal while using voice. Set `ELEVENLABS_*` for TTS and optionally `BETTY_PUBLIC_API_BASE` if the API is not on `127.0.0.1:8000`. Speech rate: `ELEVENLABS_TTS_SPEED` (default `1.1`, clamped to `0.7`–`1.2` for ElevenLabs validation).
-
-## Local Betty (quick test)
-
-```bash
-# Terminal 1 — API (voice + health)
-uv sync --extra dev
-uv run uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
-
-# Terminal 2 — Streamlit UI
-uv run streamlit run app/streamlit_app.py
-
-# One-shot: unit tests (most tests need no API keys)
-uv run pytest tests/ -q
-```
-
+**Voice:** Turn on **Voice** under the chat. That embed calls the FastAPI routes (`uvicorn backend.main:app` on port 8000 by default). Set `ELEVENLABS_*` and optionally `BETTY_PUBLIC_API_BASE` if the API is not on `127.0.0.1:8000`. Speech rate: `ELEVENLABS_TTS_SPEED` (default `1.1`, clamped to `0.7`–`1.2` for the current ElevenLabs TTS validation).
 ## Circle / x402 live-testnet notes
 
 - `CIRCLE_API_KEY` comes from the Circle Console.

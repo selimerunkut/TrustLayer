@@ -218,8 +218,11 @@ GPT-5.4 mini handles:
 
 The broker receives a small, explicit set of FastAPI-backed Python tools:
 
+- `lookup_customer_profile(name_email_or_handle)` — CRM / recurring traveler resolution
 - `get_wallet_balance()`
-- `prepare_budget_authorization(max_budget_usdc)`
+- `policy_research(trip_digest)` — TrustLayer KB consult (`KB/flight_attributes.md`); **must run before** budget lock; returns excerpts + mock research trace
+- `prepare_budget_authorization(max_budget_usdc, trip_summary)`
+- `confirm_budget_authorization(policy_draft_id, customer_confirms_demo_terms)`
 - `get_research_allowance(policy_draft_id)`
 - `pay_knowledge_service(policy_draft_id)`
 - `get_policy_recommendation(policy_draft_id, trip_details)`

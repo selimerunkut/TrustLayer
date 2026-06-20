@@ -4,6 +4,9 @@ import os
 from collections.abc import MutableMapping
 
 from fastapi import FastAPI, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+
+from backend.betty_voice_routes import register_betty_voice_routes
 
 from backend.schemas import (
     BudgetAuthorization,
@@ -96,6 +99,15 @@ def _guard_policy_write(app: FastAPI, request: PolicyWriteRequest, *, expected_s
 
 def create_app() -> FastAPI:
     app = FastAPI(title="CoverPilot API", version="0.1.0")
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    register_betty_voice_routes(app)
 
     @app.get("/health")
     def health() -> dict[str, str]:
