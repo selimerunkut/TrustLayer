@@ -31,6 +31,7 @@ except ImportError:
 from backend.schemas import PolicyRecommendation
 from backend.services.receipts import research_fee_usdc
 from coverpilot_conversation.agent import build_broker_agent
+from coverpilot_conversation.chat_llm import llm_credentials_configured
 from coverpilot_conversation.customer_directory import (
     session_crm_context_block,
     user_message_suggests_travel_planning,
@@ -268,8 +269,8 @@ def build_ui() -> None:
     st.title("Betty")
     st.caption("TrustLayer travel insurance broker — type a message or use Hold to speak for voice.")
 
-    if not os.getenv("OPENAI_API_KEY"):
-        st.caption("Add `OPENAI_API_KEY` to `.env` to enable replies.")
+    if not llm_credentials_configured():
+        st.caption("Add `NEBIUS_API_KEY` (preferred) or `OPENAI_API_KEY` to `.env` to enable replies.")
 
     if "crm_customer_id" not in st.session_state:
         st.session_state.crm_customer_id = "vasiliy"
