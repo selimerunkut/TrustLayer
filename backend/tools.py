@@ -3,6 +3,7 @@ from collections.abc import Callable, Iterable
 
 APPROVED_BROKER_TOOL_NAMES = (
     "lookup_customer_profile",
+    "policy_research",
     "get_wallet_balance",
     "prepare_budget_authorization",
     "confirm_budget_authorization",
