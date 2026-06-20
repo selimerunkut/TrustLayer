@@ -65,7 +65,7 @@ ai-agents-hackathon/
     tools.py                 # LangChain tools (mock + CRM lookup + trip_intake_gap_check)
     trip_intake_gap.py      # deterministic required-field checks for broker tools
     mock_backend.py          # deterministic demo state + session_customer_id
-    customer_directory.py    # recurring profiles (demo: Vasiliy)
+    customer_directory.py    # recurring profiles (demo: John)
     prompts.py               # Betty / TrustLayer broker instructions
   streamlit_app.py           # minimal tester UI + CRM session id sidebar
   requirements-conversation.txt
@@ -74,7 +74,7 @@ ai-agents-hackathon/
 
 ## Recurring customer (demo CRM)
 
-`lookup_customer_profile` resolves **TrustLayer** “known travelers”. The Streamlit sidebar **CRM session customer id** defaults to `vasiliy`; when the model calls `lookup_customer_profile("")`, that id is used—so Betty can greet **Vasiliy** by name and suggest the usual **~40 USDC** delay budget before asking for trip details.
+`lookup_customer_profile` resolves **TrustLayer** “known travelers”. The Streamlit sidebar **CRM session customer id** defaults to `john`; when the model calls `lookup_customer_profile("")`, that id is used—so Betty can greet **John** by name and suggest the usual **~45 USDC** flight-protection budget before asking for trip details.
 
 ## Skills consulted (source of truth for patterns)
 

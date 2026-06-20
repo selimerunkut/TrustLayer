@@ -34,8 +34,8 @@ def _register(profile: CustomerProfile, *aliases: str) -> None:
 
 _register(
     CustomerProfile(
-        customer_id="vasiliy",
-        preferred_name="Vasiliy",
+        customer_id="john",
+        preferred_name="John",
         is_recurring=True,
         typically_travels_solo=True,
         usual_coverage_budget_usdc=45.0,
@@ -46,10 +46,9 @@ _register(
             "then confirm trip details before tools."
         ),
     ),
-    "vasiliy klyosov",
-    "vasily",
-    "vasiliy@trustlayer.demo",
-    "vk",
+    "john smith",
+    "john@trustlayer.demo",
+    "jd",
 )
 
 

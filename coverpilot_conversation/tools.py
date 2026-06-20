@@ -99,7 +99,7 @@ def build_broker_tools(backend: MockBrokerBackend) -> list:
 
         **Call with empty string `""` immediately** when the user states trip or flight
         insurance intent but has not given a name—this loads the **session / kiosk**
-        customer (e.g. returning Vasiliy). Do not ask for name or email first.
+        customer (e.g. returning John). Do not ask for name or email first.
 
         If they gave a name, email, or handle in their message, pass that string instead.
 

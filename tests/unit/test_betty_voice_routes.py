@@ -26,7 +26,7 @@ def test_voice_chat_returns_503_without_llm_keys(monkeypatch):
         json={
             "thread_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
             "message": "Hello Betty",
-            "crm_customer_id": "vasiliy",
+            "crm_customer_id": "john",
         },
     )
     assert r.status_code == 503

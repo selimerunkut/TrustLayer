@@ -162,7 +162,7 @@
         const body = {
           thread_id: threadId,
           message: t,
-          crm_customer_id: (crmInput.value || "vasiliy").trim(),
+          crm_customer_id: (crmInput.value || "john").trim(),
         };
         if (!bootstrapSent && CHAT_TRANSCRIPT_FOR_VOICE && CHAT_TRANSCRIPT_FOR_VOICE.length > 0) {
           body.conversation_bootstrap = CHAT_TRANSCRIPT_FOR_VOICE;
