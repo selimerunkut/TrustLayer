@@ -75,6 +75,10 @@ short, current, and biased toward things future agents are likely to forget.
   `/opt/infra/.env` as `COOLIFY_API_KEY`; do not copy the secret into the repo.
 - Prepared Coolify deploy key UUID for the private GitHub repo:
   `xjsn8p86itmml1m92atodu1h`
+- The GitHub deploy key is already added to the TrustLayer repo, so Coolify
+  should use the deploy-key source path instead of prompting for HTTP auth.
+- Coolify may start with `SOURCE_COMMIT=unknown`; do not reintroduce a hard
+  build failure on that value.
 - Add TrustLayer deployment notes under `/opt/infra/docs/` when updating the
   infra playbook.
 
