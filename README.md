@@ -68,7 +68,9 @@ Deployment facts:
 - The Streamlit server should use an internal API base inside Compose
 - GitHub pushes to `main` are intended to trigger
   `.github/workflows/deploy-main.yml`, which calls Coolify's deploy endpoint for
-  the TrustLayer resource UUID
+  the TrustLayer resource UUID. The workflow also syncs Coolify's
+  `SOURCE_COMMIT` env to the pushed SHA before deploy so `/version` can prove
+  the live build matches the commit.
 - The GitHub deploy key is now in place for the private repo, so Coolify can
   clone `selimerunkut/TrustLayer` without falling back to username/password
   auth.
