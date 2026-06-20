@@ -17,8 +17,9 @@ Technically you will still have: **LLM + tools + checkpointer**; voice is I/O on
 | Piece | Role |
 |--------|------|
 | **`create_agent`** | LangChain 1 recommended agent loop (LangGraph-backed runtime). See `.agents/skills/langchain-fundamentals/SKILL.md`. |
-| **`ChatOpenAI`** | Model implementation; API key from `OPENAI_API_KEY`. Model id from `COVERPILOT_CHAT_MODEL` (default `gpt-4o-mini`). |
+| **`ChatOpenAI`** | Model via ``coverpilot_conversation.chat_llm``: **Nebius** (`NEBIUS_API_KEY`, Token Factory base URL) when set and reachable; otherwise **OpenAI** (`OPENAI_API_KEY`). Models: ``NEBIUS_CHAT_MODEL`` (default Qwen instruct) vs ``COVERPILOT_CHAT_MODEL`` (default `gpt-4o-mini`). |
 | **`@tool` functions** | Small, explicit surface the model may call; **all money/policy rules** stay in `mock_backend.py`. |
+| **`trip_intake_gap_check`** | Deterministic slot check before `policy_research` / `prepare_budget_authorization`; forces one clarifying question when data is missing. |
 | **`MemorySaver` + `thread_id`** | Conversation memory across Streamlit turns, per `.agents/skills/langchain-fundamentals` (checkpointer + `configurable.thread_id`). |
 | **`recursion_limit`** | Caps agent steps per invoke (same skill). Override with `COVERPILOT_RECURSION_LIMIT`. |
 | **`streamlit_app.py`** | Minimal UI: one thread per session, sidebar reset, debug JSON for mock state. |
@@ -32,7 +33,7 @@ cd ai-agents-hackathon
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-conversation.txt
-cp .env.example .env   # then put OPENAI_API_KEY in .env or export in shell
+cp .env.example .env   # then set NEBIUS_API_KEY (preferred) and/or OPENAI_API_KEY
 ```
 
 Optional observability (recommended in skills — `.agents/skills/ecosystem-primer/SKILL.md`):
@@ -48,7 +49,7 @@ export LANGSMITH_PROJECT=trustlayer-conversation
 ```bash
 cd ai-agents-hackathon
 source .venv/bin/activate
-export OPENAI_API_KEY=sk-...
+export NEBIUS_API_KEY=...   # preferred; or export OPENAI_API_KEY=sk-... as fallback
 streamlit run streamlit_app.py
 ```
 
@@ -60,7 +61,9 @@ Try a prompt like: *“I fly BER→SFO June 28, return June 29, one traveler, wo
 ai-agents-hackathon/
   coverpilot_conversation/
     agent.py                 # build_broker_agent()
-    tools.py                 # LangChain tools (mock + CRM lookup)
+    chat_llm.py              # Nebius-first ChatOpenAI + OpenAI fallback
+    tools.py                 # LangChain tools (mock + CRM lookup + trip_intake_gap_check)
+    trip_intake_gap.py      # deterministic required-field checks for broker tools
     mock_backend.py          # deterministic demo state + session_customer_id
     customer_directory.py    # recurring profiles (demo: Vasiliy)
     prompts.py               # Betty / TrustLayer broker instructions

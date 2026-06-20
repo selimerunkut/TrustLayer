@@ -32,8 +32,8 @@ example as documentation; secrets stay in your local environment or in Coolify.
 
 Useful runtime variables:
 
-- `OPENAI_API_KEY`
-- `NEBIUS_API_KEY`
+- `NEBIUS_API_KEY` (preferred Betty LLM — Nebius Token Factory)
+- `OPENAI_API_KEY` (fallback when Nebius is unset or unreachable)
 - `CIRCLE_API_KEY`
 - `CIRCLE_WALLET_ID`
 - `BASE_SEPOLIA_RPC_URL`
