@@ -323,7 +323,6 @@ def build_ui() -> None:
     overflow-y: visible !important;
   }
   .block-container {
-    padding-top: 1rem !important;
     padding-bottom: 4rem !important;
   }
 </style>
