@@ -1,0 +1,75 @@
+{
+  "commit_hash": "3c7835960873223ddacdaf3fb3d180a4fae79c81",
+  "test_summary": "Local contract deploy path verified with `uv run scripts/deploy_insurance_manager.py local-test`. Live Base Sepolia policy state verified onchain and advanced to `PayoutPaid` for the named policy. Circle x402 payment submission succeeded against the live x402 Echo merchant on Base Sepolia, and the merchant refunded the test payment.",
+  "screenshots": [],
+  "logs": [
+    "uv run scripts/deploy_insurance_manager.py local-test -> contract deployed locally at 0xf4c78D5953410EC1615501652f93727f7f5A709e",
+    "circle wallet list --type agent --chain BASE -> agent wallet 0x9084a185b4c870321f261d12efb2305f8e3d4504",
+    "circle services pay https://emc2ai.io/x402/bitquery/bagcheck/raw -> payment submitted, facilitator rejected payload with HTTP 402 invalid_request",
+    "circle services pay https://emc2ai.io/x402/bitquery/arbitragescanner -> payment submitted, facilitator rejected payload with HTTP 402 invalid_request",
+    "onchain policy state for coverpilot-live-policy-001 -> status 5 (PayoutPaid)",
+    "circle wallet transfer 0x3cf96b11e9352d9653255d4f4fbd462db5a97d56 --amount 0 --address 0x3cf96b11e9352d9653255d4f4fbd462db5a97d56 --chain BASE-SEPOLIA -> wallet deployed onchain, txHash 0x45ce62c5035cb9d3bb730f51c1d435698ae21e1a8c3d5acd7ee31acaa28e1251",
+    "circle services pay https://x402.payai.network/api/base-sepolia/paid-content --address 0x3cf96b11e9352d9653255d4f4fbd462db5a97d56 --chain BASE-SEPOLIA -> success=true, transaction 0x23f359f2ba32e8a3cf55fbbc959e3692733a728fe3ebf6b05d22d3c1e84007e5, refund 0xc71db85f3099bc36d5eda79cc82ebd061b8565f75862cf01a74f934b78e56fe2"
+  ],
+  "policy_ids": [
+    "0xb8f180462fc620c3a62073fde4a444eec71569c53904bb9a1060cbea5773acbc"
+  ],
+  "idempotency_keys": [
+    "0xf5ee7202a2c453ac4a8e7456931993c94464c34dca6070ae846335d7c9b0dd05"
+  ],
+  "receipt_references": [
+    "/root/.circle-cli/payments/payment-2026-06-20T01-25-48-798Z.json",
+    "/root/.circle-cli/payments/payment-2026-06-20T01-30-44-712Z.json",
+    "/root/.circle-cli/payments/payment-2026-06-20T01-31-09-575Z.json"
+  ],
+  "tx_hashes": [
+    "080a4b9e84858a65e5e14448992f32c8c3fc006eed5c9de16f1f382ded91cf00",
+    "2f60ea247a403e116280d296f3cf1614932477b06fa76269bbd4748b55a06d14",
+    "e0a72553d2523b838d5054f8078ea1ee8c5db066b32622c539d3ccfb43404787",
+    "7e44a8014041db99f049567cae2cc05d12ae38d2802cd2c11d1bc6760bc43620"
+  ],
+  "contract_address": "0xf4c78D5953410EC1615501652f93727f7f5A709e",
+  "fallback_mode": false,
+  "demo_transcript": "tests/manual/live-demo-transcript.md",
+  "base_policy_created": {
+    "policy_id": "0xb8f180462fc620c3a62073fde4a444eec71569c53904bb9a1060cbea5773acbc",
+    "customer_wallet": "0x9084A185B4c870321f261D12efb2305F8e3D4504",
+    "escrowed_usdc": 1000,
+    "research_fee_usdc": 100,
+    "premium_usdc": 50,
+    "payout_usdc": 2500,
+    "status": 5
+  },
+  "claim_payout_receipt": {
+    "tx_hash": "e0a72553d2523b838d5054f8078ea1ee8c5db066b32622c539d3ccfb43404787",
+    "block": 43075287,
+    "status": 1,
+    "policy_status_after_tx": 5
+  },
+  "live_requirements": {
+    "circle_x402_payment": true,
+    "base_sepolia_policy_creation": true,
+    "test_usdc_payout_after_oracle_resolution": true
+  },
+  "notes": [
+    "The live Base Sepolia contract now reports policy status 5 (PayoutPaid) for coverpilot-live-policy-001.",
+    "The Circle CLI x402 attempts produced signed payment records, but the facilitator returned HTTP 402 invalid_request before a successful paid response was observed.",
+    "The persistent reminder to commit everything after ultragoal completion remains in .omx/notepad.md."
+  ],
+  "x402_payment_receipt": {
+    "network": "Base Sepolia",
+    "endpoint": "https://x402.payai.network/api/base-sepolia/paid-content",
+    "payer": "0x3cf96b11e9352d9653255d4f4fbd462db5a97d56",
+    "transaction": "0x23f359f2ba32e8a3cf55fbbc959e3692733a728fe3ebf6b05d22d3c1e84007e5",
+    "refundTransaction": "0xc71db85f3099bc36d5eda79cc82ebd061b8565f75862cf01a74f934b78e56fe2",
+    "premiumContent": "Have some rizz!"
+  },
+  "wallet_deploy_transaction": {
+    "tx_hash": "0x45ce62c5035cb9d3bb730f51c1d435698ae21e1a8c3d5acd7ee31acaa28e1251",
+    "block_height": 43082980,
+    "source_address": "0x3cf96b11e9352d9653255d4f4fbd462db5a97d56",
+    "destination_address": "0x3cf96b11e9352d9653255d4f4fbd462db5a97d56",
+    "amount": "0",
+    "chain": "BASE-SEPOLIA"
+  }
+}
