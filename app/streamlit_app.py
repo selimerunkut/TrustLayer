@@ -117,7 +117,7 @@ def _chat_bootstrap_for_voice() -> str:
 def _voice_embed_html() -> str:
     path = Path(__file__).resolve().parent / "voice_embed.html"
     raw = path.read_text(encoding="utf-8")
-    crm = st.session_state.crm_customer_id or "vasiliy"
+    crm = st.session_state.crm_customer_id or "john"
     boot = _chat_bootstrap_for_voice()
     boot_b64 = base64.b64encode(boot.encode("utf-8")).decode("ascii") if boot else ""
     return (
@@ -421,7 +421,7 @@ def build_ui() -> None:
         st.caption("Add `NEBIUS_API_KEY` (preferred) or `OPENAI_API_KEY` to `.env` to enable replies.")
 
     if "crm_customer_id" not in st.session_state:
-        st.session_state.crm_customer_id = "vasiliy"
+        st.session_state.crm_customer_id = "john"
     if "thread_id" not in st.session_state:
         st.session_state.thread_id = str(uuid.uuid4())
     if "agent_bundle" not in st.session_state:
@@ -455,7 +455,7 @@ def build_ui() -> None:
             value=st.session_state.crm_customer_id,
             help='lookup_customer_profile("") uses this id.',
         )
-        st.session_state.crm_customer_id = (crm or "vasiliy").strip().lower()
+        st.session_state.crm_customer_id = (crm or "john").strip().lower()
         backend.session_customer_id = st.session_state.crm_customer_id
         _render_circle_wallet_panel(_betty_internal_api_base())
         with st.expander("Debug", expanded=False):

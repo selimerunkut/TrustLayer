@@ -30,7 +30,7 @@ _MAX_UI_TURNS_PER_THREAD = 400
 class BettyVoiceChatRequest(BaseModel):
     thread_id: str = Field(min_length=8, max_length=128)
     message: str = Field(min_length=1, max_length=16000)
-    crm_customer_id: str = Field(default="vasiliy", max_length=64)
+    crm_customer_id: str = Field(default="john", max_length=64)
     conversation_bootstrap: str | None = Field(
         default=None,
         max_length=8000,
@@ -86,7 +86,7 @@ def register_betty_voice_routes(app: FastAPI) -> None:
                 detail="No LLM API key on the server: set NEBIUS_API_KEY or OPENAI_API_KEY.",
             )
         agent, backend = _get_or_create_session(request.app, body.thread_id)
-        backend.session_customer_id = (body.crm_customer_id or "vasiliy").strip().lower()
+        backend.session_customer_id = (body.crm_customer_id or "john").strip().lower()
 
         from coverpilot_conversation.customer_directory import (
             session_crm_context_block,
