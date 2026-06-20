@@ -35,6 +35,38 @@ _POLICY_STATUS: dict[int, str] = {
     5: "PayoutPaid",
 }
 
+_MAX_UINT256 = 2**256 - 1
+
+ERC20_ABI: list[dict[str, Any]] = [
+    {
+        "name": "approve",
+        "type": "function",
+        "stateMutability": "nonpayable",
+        "inputs": [
+            {"name": "spender", "type": "address"},
+            {"name": "amount", "type": "uint256"},
+        ],
+        "outputs": [{"name": "", "type": "bool"}],
+    },
+    {
+        "name": "allowance",
+        "type": "function",
+        "stateMutability": "view",
+        "inputs": [
+            {"name": "owner", "type": "address"},
+            {"name": "spender", "type": "address"},
+        ],
+        "outputs": [{"name": "", "type": "uint256"}],
+    },
+    {
+        "name": "balanceOf",
+        "type": "function",
+        "stateMutability": "view",
+        "inputs": [{"name": "account", "type": "address"}],
+        "outputs": [{"name": "", "type": "uint256"}],
+    },
+]
+
 # Minimal ABI — only the functions and events this client calls.
 # Derived from contracts/InsuranceManager.sol; keep in sync.
 _ABI: list[dict[str, Any]] = [
@@ -89,6 +121,24 @@ _ABI: list[dict[str, Any]] = [
             {"name": "escrowedUsdc", "type": "uint256", "indexed": False},
         ],
     },
+    {
+        "name": "PremiumTransferred",
+        "type": "event",
+        "anonymous": False,
+        "inputs": [
+            {"name": "policyId", "type": "bytes32", "indexed": True},
+            {"name": "payer", "type": "address", "indexed": True},
+            {"name": "vault", "type": "address", "indexed": True},
+            {"name": "premiumUsdc", "type": "uint256", "indexed": False},
+        ],
+    },
+    {
+        "name": "premiumVault",
+        "type": "function",
+        "stateMutability": "view",
+        "inputs": [],
+        "outputs": [{"name": "", "type": "address"}],
+    },
 ]
 
 
@@ -126,6 +176,7 @@ class InsuranceManagerClient:
         rpc_url: str,
         contract_address: str,
         private_key: str,
+        usdc_token_address: str,
         chain_id: int = CHAIN_ID,
     ) -> None:
         self._w3 = Web3(Web3.HTTPProvider(rpc_url))
@@ -133,6 +184,10 @@ class InsuranceManagerClient:
         self._contract = self._w3.eth.contract(
             address=Web3.to_checksum_address(contract_address),
             abi=_ABI,
+        )
+        self._usdc = self._w3.eth.contract(
+            address=Web3.to_checksum_address(usdc_token_address),
+            abi=ERC20_ABI,
         )
         self._chain_id = chain_id
 
@@ -147,6 +202,7 @@ class InsuranceManagerClient:
             rpc_url=os.environ["BASE_SEPOLIA_RPC_URL"],
             contract_address=os.environ["BASE_SEPOLIA_CONTRACT_ADDRESS"],
             private_key=os.environ["BASE_SEPOLIA_DEPLOYER_PRIVATE_KEY"],
+            usdc_token_address=os.environ["BASE_SEPOLIA_TEST_USDC_ADDRESS"],
             chain_id=int(os.environ.get("BASE_SEPOLIA_CHAIN_ID", str(CHAIN_ID))),
         )
 
@@ -163,6 +219,69 @@ class InsuranceManagerClient:
     @property
     def operator_address(self) -> str:
         return self._account.address
+
+    def premium_vault_address(self) -> str:
+        return self._contract.functions.premiumVault().call()
+
+    def _build_eip1559_tx(self, fn) -> dict[str, Any]:
+        nonce = self._w3.eth.get_transaction_count(self._account.address)
+        latest = self._w3.eth.get_block("latest")
+        base_fee = latest.get("baseFeePerGas") or self._w3.eth.gas_price
+        priority = self._w3.to_wei(1, "gwei")
+        tx = fn.build_transaction(
+            {
+                "from": self._account.address,
+                "nonce": nonce,
+                "chainId": self._chain_id,
+                "maxFeePerGas": int(base_fee) * 2 + priority,
+                "maxPriorityFeePerGas": priority,
+            }
+        )
+        tx["gas"] = int(self._w3.eth.estimate_gas(tx) * 1.25)
+        return tx
+
+    def _send_signed_tx(self, tx: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+        signed = self._account.sign_transaction(tx)
+        tx_hash_bytes = self._w3.eth.send_raw_transaction(signed.raw_transaction)
+        receipt = self._w3.eth.wait_for_transaction_receipt(tx_hash_bytes, timeout=90)
+        return tx_hash_bytes.hex(), receipt
+
+    def _ensure_usdc_allowance(self, spender: str, required_amount: int) -> list[str]:
+        owner = Web3.to_checksum_address(self._account.address)
+        spender_cs = Web3.to_checksum_address(spender)
+        allowance = int(self._usdc.functions.allowance(owner, spender_cs).call())
+        if allowance >= required_amount:
+            return []
+
+        balance = int(self._usdc.functions.balanceOf(owner).call())
+        if balance < required_amount:
+            readable = balance / 10**USDC_DECIMALS
+            needed = required_amount / 10**USDC_DECIMALS
+            raise RuntimeError(
+                f"Broker payer {owner} has {readable:.6f} USDC but premium requires {needed:.6f} USDC. "
+                "Fund the deployer with Base Sepolia test USDC; ERC-20 approve is handled automatically."
+            )
+
+        tx_hashes: list[str] = []
+        if allowance > 0:
+            reset_fn = self._usdc.functions.approve(spender_cs, 0)
+            reset_hash, reset_receipt = self._send_signed_tx(self._build_eip1559_tx(reset_fn))
+            if reset_receipt["status"] != 1:
+                raise RuntimeError(f"USDC allowance reset failed: {reset_hash}")
+            tx_hashes.append(reset_hash)
+
+        approve_fn = self._usdc.functions.approve(spender_cs, _MAX_UINT256)
+        approve_hash, approve_receipt = self._send_signed_tx(self._build_eip1559_tx(approve_fn))
+        if approve_receipt["status"] != 1:
+            raise RuntimeError(f"USDC approve failed: {approve_hash}")
+        tx_hashes.append(approve_hash)
+
+        updated = int(self._usdc.functions.allowance(owner, spender_cs).call())
+        if updated < required_amount:
+            raise RuntimeError(
+                f"USDC allowance still {updated} after approve; need {required_amount} base units."
+            )
+        return tx_hashes
 
     # ------------------------------------------------------------------
     # Write: purchasePolicy
@@ -213,6 +332,8 @@ class InsuranceManagerClient:
         x402_ref = _str_to_bytes32(x402_receipt)
 
         customer_addr = Web3.to_checksum_address(customer_wallet)
+        premium_amount = _usdc_to_uint(premium_usdc)
+        approve_tx_hashes = self._ensure_usdc_allowance(self._contract.address, premium_amount)
 
         fn = self._contract.functions.purchasePolicy(
             policy_id_bytes,
@@ -229,27 +350,8 @@ class InsuranceManagerClient:
             x402_ref,
         )
 
-        nonce = self._w3.eth.get_transaction_count(self._account.address)
-        latest = self._w3.eth.get_block("latest")
-        base_fee = latest.get("baseFeePerGas") or self._w3.eth.gas_price
-        priority = self._w3.to_wei(1, "gwei")
-
-        tx = fn.build_transaction(
-            {
-                "from": self._account.address,
-                "nonce": nonce,
-                "chainId": self._chain_id,
-                "maxFeePerGas": int(base_fee) * 2 + priority,
-                "maxPriorityFeePerGas": priority,
-            }
-        )
-        tx["gas"] = int(self._w3.eth.estimate_gas(tx) * 1.25)
-
-        signed = self._account.sign_transaction(tx)
-        tx_hash_bytes = self._w3.eth.send_raw_transaction(signed.raw_transaction)
-        receipt = self._w3.eth.wait_for_transaction_receipt(tx_hash_bytes, timeout=90)
-
-        tx_hex = tx_hash_bytes.hex()
+        tx_hex, receipt = self._send_signed_tx(self._build_eip1559_tx(fn))
+        vault = self.premium_vault_address()
         return {
             "tx_hash": tx_hex,
             "block_number": receipt["blockNumber"],
@@ -260,6 +362,11 @@ class InsuranceManagerClient:
             "chain": "base-sepolia",
             "block_explorer_url": BASESCAN_TX_URL.format(tx_hex),
             "contract_explorer_url": BASESCAN_ADDR_URL.format(self._contract.address),
+            "premium_usdc": premium_usdc,
+            "premium_vault_address": vault,
+            "premium_transfer_method": "onchain_erc20_transferFrom",
+            "premium_transfer_tx_hash": tx_hex,
+            "approve_tx_hashes": approve_tx_hashes,
         }
 
     # ------------------------------------------------------------------

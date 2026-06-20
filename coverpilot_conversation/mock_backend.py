@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from backend.services.pricing import quote_payout_usdc, quote_premium_usdc
 from backend.services.receipts import research_fee_usdc
 
 
@@ -179,11 +180,16 @@ class MockBrokerBackend:
 
     def get_policy_recommendation(self, draft_id: str, trip_details: str) -> dict[str, Any]:
         d = self._require_draft(draft_id)
+        # Demo resilience: the LLM often obtains buy-in in chat but skips
+        # ``pay_knowledge_research_fee`` before ``get_policy_recommendation``.
+        if d.status in (DraftStatus.BUDGET_PREPARED, DraftStatus.AUTHORIZED):
+            self.pay_knowledge_service(draft_id)
+            d = self._require_draft(draft_id)
         if d.status != DraftStatus.RESEARCH_PAID:
             raise ValueError("Pay the knowledge service before requesting a recommendation.")
-        # Deterministic-ish mock premium from budget (do not let the LLM invent numbers)
-        premium = max(10.0, min(d.max_budget_usdc * 0.42, d.max_budget_usdc - d.research_fee_usdc))
-        payout = 300.0 if d.max_budget_usdc >= 80 else 150.0
+        # Deterministic micro-premium from budget (do not let the LLM invent numbers)
+        premium = quote_premium_usdc(d.max_budget_usdc, d.research_fee_usdc)
+        payout = quote_payout_usdc(d.max_budget_usdc)
         rec = {
             "policyName": "TrustLayer Flight Bundle (delay + cancellation)",
             "premiumUsdc": round(premium, 2),
@@ -205,8 +211,17 @@ class MockBrokerBackend:
 
     def purchase_policy(self, draft_id: str) -> dict[str, Any]:
         d = self._require_draft(draft_id)
+        # Demo resilience: the LLM often obtains buy-in in chat but skips
+        # ``get_policy_recommendation`` before ``purchase_policy``.
+        if d.status == DraftStatus.RESEARCH_PAID:
+            self.get_policy_recommendation(draft_id, d.trip_summary)
+            d = self._require_draft(draft_id)
         if d.status != DraftStatus.RECOMMENDED or not d.recommendation:
-            raise ValueError("No recommendation to purchase for this draft.")
+            raise ValueError(
+                "No recommendation to purchase for this draft. "
+                "Call get_policy_recommendation after the research fee is paid, "
+                f"then purchase once the traveler accepts (current status={d.status.value})."
+            )
         premium = float(d.recommendation["premiumUsdc"])
         if premium + d.research_fee_usdc > d.max_budget_usdc + 1e-6:
             raise ValueError("Premium exceeds authorized maximum budget (mock check).")
@@ -237,15 +252,25 @@ class MockBrokerBackend:
         }
 
     def get_policy_status(self, policy_id: str) -> dict[str, Any]:
+        key = (policy_id or "").strip()
         for d in self.drafts.values():
-            if d.policy_id == policy_id:
+            if d.policy_id and d.policy_id == key:
                 return {
-                    "policy_id": policy_id,
+                    "policy_id": d.policy_id,
+                    "policy_draft_id": d.draft_id,
                     "status": d.status.value,
                     "recommendation": d.recommendation,
                     "x402_receipt": d.x402_receipt,
                 }
-        raise ValueError(f"Unknown policy_id: {policy_id}")
+        # Demo resilience: the LLM often passes policy_draft_id (draft-...) here.
+        d = self._require_draft(key)
+        return {
+            "policy_id": d.policy_id,
+            "policy_draft_id": d.draft_id,
+            "status": d.status.value,
+            "recommendation": d.recommendation,
+            "x402_receipt": d.x402_receipt,
+        }
 
     def snapshot_json(self) -> str:
         """Debug helper."""
