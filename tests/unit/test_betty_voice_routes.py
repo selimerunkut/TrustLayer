@@ -14,6 +14,7 @@ def test_voice_embed_template_exists():
     text = p.read_text(encoding="utf-8")
     assert "__BETTY_API_BASE__" in text
     assert "__THREAD_ID__" in text
+    assert "__BOOTSTRAP_B64__" in text
     assert "/api/betty/voice-chat" in text
 
 

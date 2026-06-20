@@ -2,9 +2,25 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from langchain_core.messages import AIMessage
+
+
+def format_assistant_reply_for_display(text: str) -> str:
+    """Strip common Markdown for plain chat/TTS (Betty should speak in prose, not docs)."""
+    t = (text or "").strip()
+    if not t:
+        return t
+    t = re.sub(r"(?m)^#{1,6}\s+", "", t)
+    t = re.sub(r"\*\*([^*]+)\*\*", r"\1", t)
+    t = re.sub(r"__([^_]+)__", r"\1", t)
+    t = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"\1", t)
+    t = re.sub(r"(?m)^\s*[-*]\s+", "– ", t)
+    t = re.sub(r"(?m)^\s*\d+\.\s+", "", t)
+    t = re.sub(r"\n{3,}", "\n\n", t)
+    return t.strip()
 
 
 def extract_last_ai_text(result: dict[str, Any]) -> str:
