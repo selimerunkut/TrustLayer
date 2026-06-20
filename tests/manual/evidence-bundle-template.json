@@ -1,0 +1,20 @@
+{
+  "commit_hash": "",
+  "test_summary": "",
+  "screenshots": [],
+  "logs": [],
+  "policy_ids": [],
+  "idempotency_keys": [],
+  "receipt_references": [],
+  "tx_hashes": [],
+  "contract_address": "",
+  "fallback_mode": false,
+  "demo_transcript": "",
+  "base_policy_created": {},
+  "claim_payout_receipt": {},
+  "live_requirements": {
+    "circle_x402_payment": false,
+    "base_sepolia_policy_creation": false,
+    "test_usdc_payout_after_oracle_resolution": false
+  }
+}

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trustlayer-coverpilot"
+version = "0.1.0"
+description = "CoverPilot MVP scaffold for the ultragoal plan"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "streamlit>=1.36,<2",
+  "pydantic>=2.8,<3",
+  "uvicorn[standard]>=0.30,<1",
+  "langchain>=1,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["app*", "backend*"]
