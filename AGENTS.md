@@ -53,7 +53,7 @@ short, current, and biased toward things future agents are likely to forget.
 - `BASE_SEPOLIA_TEST_USDC_ADDRESS`:
   - `0x036CbD53842c5426634e7929541eC2318f3dCF7e`
 - Current live contract / `BASE_SEPOLIA_CONTRACT_ADDRESS`:
-  - `0xf4c78D5953410EC1615501652f93727f7f5A709e`
+  - `0xC157bA30863611F2eCB21BAEf556884a72ec559B`
 
 ## Live-demo gates
 

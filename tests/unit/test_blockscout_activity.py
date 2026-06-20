@@ -60,8 +60,8 @@ def test_fetch_onchain_wallet_activity_merges_wallet_and_deployer(monkeypatch):
         items = fetch_onchain_wallet_activity(limit=10, env=env)
 
     assert len(items) == 2
-    assert items[0].operation == "USDC in"
-    assert items[1].operation == "purchasePolicy"
+    assert items[0].operation == "purchasePolicy"
+    assert items[1].operation == "USDC in"
 
 
 def test_merge_wallet_transactions_dedupes_by_id():
@@ -70,3 +70,22 @@ def test_merge_wallet_transactions_dedupes_by_id():
     c = WalletTransactionItem(id="0xdef", state="ok", amount_usdc=2.0, operation="c", create_date="2026-06-20 12:00:00 UTC")
     merged = merge_wallet_transactions([a, b], [c], limit=5)
     assert len(merged) == 2
+
+
+def test_merge_wallet_transactions_orders_newest_first_across_groups():
+    older = WalletTransactionItem(
+        id="0xold",
+        state="confirmed",
+        amount_usdc=20.0,
+        operation="USDC in",
+        create_date="2026-06-20 08:30:20 UTC",
+    )
+    newer = WalletTransactionItem(
+        id="0xnew",
+        state="confirmed",
+        amount_usdc=0.0,
+        operation="purchasePolicy",
+        create_date="2026-06-20 11:39:52 UTC",
+    )
+    merged = merge_wallet_transactions([older], [newer], limit=3)
+    assert [tx.operation for tx in merged] == ["purchasePolicy", "USDC in"]
