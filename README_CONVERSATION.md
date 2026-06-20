@@ -80,7 +80,7 @@ Development-time guidance (not loaded at runtime by the app):
 - `.agents/skills/ecosystem-primer/SKILL.md` — why **LangChain** (single-purpose agent) vs LangGraph / Deep Agents.
 - `.agents/skills/langchain-dependencies/SKILL.md` — versions and installs (`requirements-conversation.txt`).
 - `.agents/skills/langchain-fundamentals/SKILL.md` — `create_agent`, `@tool`, `MemorySaver`, `recursion_limit`.
-- `.agents/skills/langchain-middleware/SKILL.md` — when you add **HITL** around `purchase_policy` / `pay_knowledge_service` for production.
+- `.agents/skills/langchain-middleware/SKILL.md` — when you add **HITL** around `purchase_policy` / `pay_knowledge_research_fee` for production.
 
 ## Next integration steps (toward full CoverPilot)
 

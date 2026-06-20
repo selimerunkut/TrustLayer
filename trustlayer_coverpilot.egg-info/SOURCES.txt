@@ -17,6 +17,8 @@ backend/services/elevenlabs_voice.py
 backend/services/oracle.py
 backend/services/receipts.py
 backend/services/session_mode.py
+contracts/__init__.py
+contracts/insurance_manager_client.py
 coverpilot_conversation/__init__.py
 coverpilot_conversation/agent.py
 coverpilot_conversation/customer_directory.py
