@@ -18,6 +18,8 @@ from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from coverpilot_conversation.chat_llm import llm_credentials_configured
+
 logger = logging.getLogger(__name__)
 
 _MAX_SESSIONS = 80
@@ -78,8 +80,11 @@ def register_betty_voice_routes(app: FastAPI) -> None:
 
     @router.post("/api/betty/voice-chat")
     def betty_voice_chat(request: Request, body: BettyVoiceChatRequest) -> dict[str, str]:
-        if not os.getenv("OPENAI_API_KEY", "").strip():
-            raise HTTPException(status_code=503, detail="OPENAI_API_KEY is not configured on the API server.")
+        if not llm_credentials_configured():
+            raise HTTPException(
+                status_code=503,
+                detail="No LLM API key on the server: set NEBIUS_API_KEY or OPENAI_API_KEY.",
+            )
         agent, backend = _get_or_create_session(request.app, body.thread_id)
         backend.session_customer_id = (body.crm_customer_id or "vasiliy").strip().lower()
 
