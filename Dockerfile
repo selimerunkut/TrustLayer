@@ -13,8 +13,8 @@ COPY . .
 
 ARG SOURCE_COMMIT=unknown
 
-RUN test -n "${SOURCE_COMMIT}" && test "${SOURCE_COMMIT}" != "unknown" \
-    && uv sync --frozen --no-dev
+# Coolify may not populate SOURCE_COMMIT on the initial deploy path.
+RUN uv sync --frozen --no-dev
 
 ENV TRUSTLAYER_GIT_SHA="${SOURCE_COMMIT}" \
     STREAMLIT_SERVER_HEADLESS=true \

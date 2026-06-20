@@ -69,6 +69,14 @@ Deployment facts:
 - GitHub pushes to `main` are intended to trigger
   `.github/workflows/deploy-main.yml`, which calls Coolify's deploy endpoint for
   the TrustLayer resource UUID
+- The GitHub deploy key is now in place for the private repo, so Coolify can
+  clone `selimerunkut/TrustLayer` without falling back to username/password
+  auth.
+- Coolify's initial build path may not populate `SOURCE_COMMIT`; the Dockerfile
+  now treats that value as informational instead of a hard failure so first
+  deploys can complete.
+- Keep the live Coolify environment variables aligned with `.env` when adding
+  new integrations; Nebius should follow the same pattern.
 
 The current Base Sepolia and Circle notes live in `AGENTS.md` so future agents do
 not have to rediscover them.
