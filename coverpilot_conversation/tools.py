@@ -17,10 +17,59 @@ from typing import TYPE_CHECKING
 
 from langchain_core.tools import tool
 
+from backend.schemas import SessionMode
+from backend.services.circle_wallet import (
+    CircleWalletError,
+    ensure_broker_payer_usdc,
+    fetch_wallet_balance,
+    resolve_agent_wallet_address,
+)
+from backend.services.session_mode import preflight_session_mode
 from coverpilot_conversation.customer_directory import resolve_customer
 
 if TYPE_CHECKING:
     from coverpilot_conversation.mock_backend import MockBrokerBackend
+
+
+def _resolve_customer_wallet() -> str:
+    try:
+        return resolve_agent_wallet_address()
+    except Exception:
+        return os.environ.get("BASE_SEPOLIA_DEPLOYER_ADDRESS", "").strip()
+
+
+def _payment_from_onchain(onchain: dict, *, premium_usdc: float) -> dict:
+    if not onchain.get("attempted"):
+        return {"attempted": False}
+    if onchain.get("error"):
+        return {
+            "attempted": True,
+            "simulated": False,
+            "method": "onchain_erc20_transferFrom",
+            "amount_usdc": premium_usdc,
+            "error": onchain["error"],
+        }
+    return {
+        "attempted": True,
+        "simulated": False,
+        "method": onchain.get("premium_transfer_method", "onchain_erc20_transferFrom"),
+        "tx_hash": onchain.get("premium_transfer_tx_hash") or onchain.get("tx_hash"),
+        "amount_usdc": onchain.get("premium_usdc", premium_usdc),
+        "destination_address": onchain.get("premium_vault_address"),
+        "approve_tx_hashes": onchain.get("approve_tx_hashes", []),
+        "provenance": "base:sepolia:erc20",
+    }
+
+
+def _mock_payment(*, premium_usdc: float, policy_id: str) -> dict:
+    return {
+        "attempted": True,
+        "simulated": True,
+        "method": "onchain_erc20_transferFrom",
+        "tx_hash": f"mock-transfer:{policy_id}",
+        "amount_usdc": premium_usdc,
+        "provenance": "mock:circle_wallet",
+    }
 
 
 def _try_build_chain_client():
@@ -29,6 +78,7 @@ def _try_build_chain_client():
         "BASE_SEPOLIA_RPC_URL",
         "BASE_SEPOLIA_CONTRACT_ADDRESS",
         "BASE_SEPOLIA_DEPLOYER_PRIVATE_KEY",
+        "BASE_SEPOLIA_TEST_USDC_ADDRESS",
     )
     if not all(os.environ.get(k, "").strip() for k in required):
         return None
@@ -96,11 +146,15 @@ def build_broker_tools(backend: MockBrokerBackend) -> list:
 
     @tool
     def get_wallet_balance() -> str:
-        """Return the broker's current mock USDC wallet balance.
+        """Return the broker's current USDC wallet balance.
 
-        Use before paying for knowledge services to ensure sufficient demo funds.
+        Uses the live Circle / on-chain balance when session mode is LIVE; otherwise
+        returns the in-memory mock broker wallet balance.
         """
-        return json.dumps({"broker_wallet_usdc": round(backend.broker_wallet_usdc, 2)})
+        if preflight_session_mode() == SessionMode.LIVE:
+            balance = fetch_wallet_balance()
+            return json.dumps(balance.model_dump(mode="json"))
+        return json.dumps({"broker_wallet_usdc": round(backend.broker_wallet_usdc, 2), "simulated": True})
 
     @tool
     def prepare_budget_authorization(max_budget_usdc: float, trip_summary: str) -> str:
@@ -201,11 +255,14 @@ def build_broker_tools(backend: MockBrokerBackend) -> list:
         Returns delay, cancellation, and bundled risk fields from the mock catalogue.
         The model must NOT invent premiums or benefits; explain exactly what the JSON contains.
 
-        Args:
-            policy_draft_id: Draft id with research already paid.
-            trip_details: Concise recap of trip constraints for the audit trail (can mirror trip_summary).
+        If the model skipped ``pay_knowledge_research_fee`` but the draft is authorized
+        (or still ``budget_prepared`` with clear user assent), the backend will take
+        payment before returning the recommendation (demo safety net).
         """
-        rec = backend.get_policy_recommendation(policy_draft_id, trip_details)
+        try:
+            rec = backend.get_policy_recommendation(policy_draft_id, trip_details)
+        except ValueError as exc:
+            return json.dumps({"error": str(exc), "policy_draft_id": policy_draft_id})
         return json.dumps(rec)
 
     @tool
@@ -213,15 +270,19 @@ def build_broker_tools(backend: MockBrokerBackend) -> list:
         policy_draft_id: str,
         customer_confirms_insurance_purchase: bool,
     ) -> str:
-        """Purchase the **insurance** product: debit the mock premium and write the policy
-        on-chain (Base Sepolia) when env is configured.
+        """Purchase the **insurance** product: pull the premium in USDC on-chain via
+        ``InsuranceManager.purchasePolicy`` (ERC20 ``transferFrom``), debit the mock
+        premium ledger, and write the policy record on Base Sepolia when env is configured.
 
         **Only** call after ``get_policy_recommendation`` and **only** when the traveler
         has **explicitly** agreed to buy the presented plan (e.g. clear yes to the premium
         and coverage). The research fee was already handled by ``pay_knowledge_research_fee``;
-        this step is strictly the insurance purchase + policy record transaction.
+        this step is strictly the insurance purchase + on-chain USDC transfer + policy record.
 
-        After success, share ``onchain.block_explorer_url`` in chat so they can view the tx.
+        If the model skipped ``pay_knowledge_research_fee`` or ``get_policy_recommendation``,
+        the backend will coalesce those steps at recommendation or purchase time (demo safety net).
+
+        After success, share ``payment.tx_hash`` and ``onchain.block_explorer_url`` in chat.
         If the chain write fails, mock purchase may still succeed; ``onchain.error`` explains.
 
         Args:
@@ -240,43 +301,60 @@ def build_broker_tools(backend: MockBrokerBackend) -> list:
                     "policy_draft_id": policy_draft_id,
                 }
             )
-        # Grab draft before state transition so we have all fields for the onchain call.
-        draft = backend.drafts.get(policy_draft_id)
-        out = backend.purchase_policy(policy_draft_id)
+        # Grab draft before state transition so we have all fields for payment + onchain call.
+        try:
+            draft = backend._require_draft(policy_draft_id)
+            out = backend.purchase_policy(policy_draft_id)
+        except ValueError as exc:
+            return json.dumps({"error": str(exc), "policy_draft_id": policy_draft_id})
 
+        payment: dict = {"attempted": False}
         onchain: dict = {"attempted": False}
 
         if draft and out.get("policy_id"):
+            rec = draft.recommendation or {}
+            premium_usdc = float(rec.get("premiumUsdc", 0))
+            policy_id = out["policy_id"]
             client = _try_build_chain_client()
             if client:
                 onchain["attempted"] = True
                 try:
-                    rec = draft.recommendation or {}
-                    customer_wallet = os.environ.get(
-                        "CIRCLE_WALLET_ID",
-                        os.environ.get("BASE_SEPOLIA_DEPLOYER_ADDRESS", ""),
-                    ).strip()
-
+                    fund_receipt = ensure_broker_payer_usdc(required_usdc=premium_usdc)
+                    if fund_receipt is not None:
+                        onchain["broker_funding"] = {
+                            "amount_usdc": fund_receipt.amount_usdc,
+                            "destination_address": fund_receipt.destination_address,
+                            "tx_hash": fund_receipt.tx_hash,
+                            "provenance": fund_receipt.provenance,
+                        }
+                    customer_wallet = _resolve_customer_wallet()
+                    premium_payment_ref = draft.x402_receipt or "no-premium-payment"
                     result = client.purchase_policy(
-                        policy_id=out["policy_id"],
+                        policy_id=policy_id,
                         customer_wallet=customer_wallet,
                         budget_locked_usdc=draft.max_budget_usdc,
                         research_fee_usdc=draft.research_fee_usdc,
-                        premium_usdc=float(rec.get("premiumUsdc", 0)),
+                        premium_usdc=premium_usdc,
                         payout_usdc=float(rec.get("payoutUsdc", 0)),
                         delay_threshold_minutes=int(rec.get("delayTriggerMinutes", 180)),
                         flight_descriptor=draft.trip_summary,
                         recommendation_json=json.dumps(rec, ensure_ascii=False),
-                        x402_receipt=draft.x402_receipt or "no-x402-receipt",
+                        x402_receipt=str(premium_payment_ref),
                     )
                     onchain.update(result)
+                except CircleWalletError as exc:
+                    onchain["error"] = str(exc)
                 except Exception as exc:
                     onchain["error"] = str(exc)
+                payment = _payment_from_onchain(onchain, premium_usdc=premium_usdc)
             else:
                 onchain["skipped_reason"] = (
-                    "BASE_SEPOLIA_RPC_URL / CONTRACT_ADDRESS / DEPLOYER_PRIVATE_KEY not all set."
+                    "BASE_SEPOLIA_RPC_URL / CONTRACT_ADDRESS / DEPLOYER_PRIVATE_KEY / "
+                    "TEST_USDC_ADDRESS not all set."
                 )
+                payment = _mock_payment(premium_usdc=premium_usdc, policy_id=policy_id)
 
+        out["payment"] = payment
         out["onchain"] = onchain
         return json.dumps(out)
 
@@ -292,10 +370,11 @@ def build_broker_tools(backend: MockBrokerBackend) -> list:
 
     @tool
     def get_policy_status(policy_id: str) -> str:
-        """Look up status for a purchased policy id (mock state + on-chain record).
+        """Look up status for a policy or in-progress draft (mock session state).
 
         Args:
-            policy_id: Value returned by purchase_policy.
+            policy_id: ``pol-...`` from purchase_policy, or ``draft-...`` from
+                prepare_budget_authorization when the traveler asks before purchase.
         """
         out = backend.get_policy_status(policy_id)
         return json.dumps(out)

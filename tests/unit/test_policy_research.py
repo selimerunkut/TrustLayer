@@ -13,6 +13,32 @@ def test_prepare_budget_requires_policy_research_first():
     assert d.draft_id.startswith("draft-")
 
 
+def test_get_policy_recommendation_without_prior_payment_coalesces_pay():
+    """Demo safety net: LLM may skip pay_knowledge_research_fee before get_policy_recommendation."""
+    b = MockBrokerBackend()
+    b.mark_policy_research_done()
+    d = b.prepare_budget_authorization(45.0, "Sofia–Frankfurt–Santiago")
+    b.confirm_budget_authorization(d.draft_id, True)
+    assert b.drafts[d.draft_id].status == DraftStatus.AUTHORIZED
+
+    rec = b.get_policy_recommendation(d.draft_id, "Sofia–Frankfurt–Santiago")
+    assert rec["premiumUsdc"] > 0
+    assert b.drafts[d.draft_id].status == DraftStatus.RECOMMENDED
+    assert b.drafts[d.draft_id].x402_receipt
+
+
+def test_get_policy_status_accepts_draft_id():
+    """Demo safety net: LLM may pass policy_draft_id instead of pol-... id."""
+    b = MockBrokerBackend()
+    b.mark_policy_research_done()
+    d = b.prepare_budget_authorization(45.0, "Sofia–Frankfurt–Santiago")
+    b.confirm_budget_authorization(d.draft_id, True)
+    status = b.get_policy_status(d.draft_id)
+    assert status["policy_draft_id"] == d.draft_id
+    assert status["policy_id"] is None
+    assert status["status"] == DraftStatus.AUTHORIZED.value
+
+
 def test_pay_knowledge_authorizes_when_draft_still_budget_prepared():
     """LLM sometimes skips confirm_budget_authorization; payment after explicit fee consent coalesces."""
     b = MockBrokerBackend()

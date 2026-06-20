@@ -3,11 +3,48 @@ pragma solidity ^0.8.24;
 
 import "../contracts/InsuranceManager.sol";
 
+/// @dev Local IERC20 stand-in for unit tests only; live deploy uses Base Sepolia test USDC.
+contract TestUsdc {
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    function mint(address to, uint256 amount) external {
+        balanceOf[to] += amount;
+    }
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        return true;
+    }
+
+    function transfer(address to, uint256 amount) external returns (bool) {
+        require(balanceOf[msg.sender] >= amount, "insufficient balance");
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+        require(allowance[from][msg.sender] >= amount, "insufficient allowance");
+        require(balanceOf[from] >= amount, "insufficient balance");
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+}
+
 contract InsuranceManagerTest {
     InsuranceManager private manager;
+    TestUsdc private usdc;
+    address private vault;
 
     function setUp() public {
-        manager = new InsuranceManager();
+        usdc = new TestUsdc();
+        vault = address(0xCAFE);
+        manager = new InsuranceManager(address(usdc), vault);
+        usdc.mint(address(this), 1_000_000);
+        usdc.approve(address(manager), type(uint256).max);
     }
 
     function _policyId() private pure returns (bytes32) {
@@ -159,6 +196,7 @@ contract InsuranceManagerTest {
         require(recommendationHash == bytes32("recommendation"), "recommendation");
         require(x402Reference == bytes32("x402"), "x402");
         require(status == InsuranceManager.PolicyStatus.Active, "status");
+        require(usdc.balanceOf(vault) == 40, "premium transferred");
 
         manager.purchasePolicy(
             _policyId(),
@@ -183,6 +221,7 @@ contract InsuranceManagerTest {
         ) = _policyIdentity(_policyId());
         require(idempotentEscrowedUsdc == 1000, "idempotent escrow");
         require(idempotentStatus == InsuranceManager.PolicyStatus.Active, "idempotent status");
+        require(usdc.balanceOf(vault) == 40, "idempotent premium not double-charged");
     }
 
     function testRejectThenRefundTransitionsAndCopiesEscrow() public {
@@ -205,6 +244,7 @@ contract InsuranceManagerTest {
 
     function testResolveAndPayOutRequiresApproval() public {
         _seedPolicy();
+        usdc.mint(address(manager), 300);
 
         (bool beforeApproval, ) = address(manager).call(abi.encodeWithSelector(manager.payOut.selector, _policyId()));
         require(!beforeApproval, "payout should fail before approval");
@@ -220,5 +260,6 @@ contract InsuranceManagerTest {
         manager.payOut(_policyId());
         (, , , InsuranceManager.PolicyStatus paidStatus) = _policyIdentity(_policyId());
         require(paidStatus == InsuranceManager.PolicyStatus.PayoutPaid, "paid");
+        require(usdc.balanceOf(address(0xBEEF)) == 300, "payout transferred");
     }
 }
