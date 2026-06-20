@@ -1,4 +1,4 @@
-# CoverPilot: Agentic P2P Travel Insurance
+# TrustLayer: Agentic P2P Travel Insurance
 
 ## Hackathon Scope
 
@@ -33,11 +33,11 @@ The application uses the locally installed `.agents/skills/` LangChain guidance 
 - `langchain-fundamentals`
 - `langchain-middleware`
 
-These skills guide the coding agents building CoverPilot; they are not runtime tools exposed to the customer-facing broker. At runtime, the broker receives only explicitly implemented and validated Python tools from the FastAPI application.
+These skills guide the coding agents building TrustLayer; they are not runtime tools exposed to the customer-facing broker. At runtime, the broker receives only explicitly implemented and validated Python tools from the FastAPI application.
 
 ### Why LangChain instead of LangGraph or Deep Agents
 
-CoverPilot has one fixed-purpose agent with a small tool set, so LangChain `create_agent` is the simplest fit for the MVP. Budget limits, purchase approval, contract writes, and claim resolution remain deterministic application or smart-contract operations rather than model-controlled workflow steps.
+TrustLayer has one fixed-purpose agent with a small tool set, so LangChain `create_agent` is the simplest fit for the MVP. Budget limits, purchase approval, contract writes, and claim resolution remain deterministic application or smart-contract operations rather than model-controlled workflow steps.
 
 LangGraph persistence and interrupt/resume flows would become useful if a later version must recover long-running policy workflows across sessions. Deep Agents would add planning, filesystem, memory, and subagent capabilities that this narrow broker does not need.
 
@@ -66,7 +66,7 @@ Streamlit owns presentation and conversational session state. FastAPI owns authe
 
 ## Product Definition
 
-CoverPilot is a conversational travel-insurance broker powered by one AI agent and a Circle Agent Wallet.
+TrustLayer is a conversational travel-insurance broker powered by one AI agent and a Circle Agent Wallet.
 
 The customer does not need to know which insurance product they want. They describe their trip, concerns, and maximum budget naturally:
 
@@ -427,7 +427,7 @@ Transaction hashes and raw onchain details are available only in an optional tec
 
 ## Legal and Product Disclaimer
 
-Real insurance must normally be issued by an authorized insurer and comply with applicable insurance, consumer-protection, privacy, and financial regulations. CoverPilot does not provide legally valid coverage.
+Real insurance must normally be issued by an authorized insurer and comply with applicable insurance, consumer-protection, privacy, and financial regulations. TrustLayer does not provide legally valid coverage.
 
 The interface must display:
 
@@ -449,6 +449,6 @@ The interface must display:
 
 ## Final Decision
 
-Build **CoverPilot** as a narrow, conversational flight-delay insurance demonstration.
+Build **TrustLayer** as a narrow, conversational flight-delay insurance demonstration.
 
 The strongest hackathon story is not merely “insurance onchain.” It is that one AI broker manages a customer-approved budget, purchases specialist insurance knowledge through x402, recommends suitable protection, creates an auditable onchain policy, and completes an automatic test-USDC claim workflow.

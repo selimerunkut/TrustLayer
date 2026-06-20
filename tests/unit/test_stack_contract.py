@@ -39,7 +39,7 @@ from backend.tools import APPROVED_BROKER_TOOL_NAMES, validate_broker_tools
 
 def test_fastapi_app_boots_and_health_route_exists():
     app = create_app()
-    assert app.title == "CoverPilot API"
+    assert app.title == "TrustLayer API"
     paths = [getattr(r, "path", None) for r in app.routes]
     paths = [p for p in paths if isinstance(p, str)]
     assert "/health" in paths

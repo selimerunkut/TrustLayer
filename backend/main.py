@@ -98,7 +98,7 @@ def _guard_policy_write(app: FastAPI, request: PolicyWriteRequest, *, expected_s
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="CoverPilot API", version="0.1.0")
+    app = FastAPI(title="TrustLayer API", version="0.1.0")
 
     app.add_middleware(
         CORSMiddleware,

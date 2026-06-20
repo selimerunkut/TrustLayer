@@ -1,4 +1,4 @@
-# CoverPilot MVP
+# TrustLayer MVP
 
 This repository is being scaffolded to match the approved ultragoal plan:
 

@@ -1,2 +1,2 @@
-"""Streamlit app package for the CoverPilot MVP scaffold."""
+"""Streamlit app package for the TrustLayer MVP scaffold."""
 

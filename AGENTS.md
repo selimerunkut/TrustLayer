@@ -1,4 +1,4 @@
-# CoverPilot repo notes
+# TrustLayer repo notes
 
 This file is the durable scratchpad for repo-specific operating facts. Keep it
 short, current, and biased toward things future agents are likely to forget.
@@ -70,4 +70,6 @@ short, current, and biased toward things future agents are likely to forget.
   - Base Sepolia / test-USDC contract flow
 - The repo currently treats `CIRCLE_API_KEY` + `CIRCLE_WALLET_ID` as the
   minimal live Circle readiness pair.
+- For local Coolify deployments, use an `sslip.io` hostname for public reachability
+  (for example `trustlayer.37.27.94.136.sslip.io`).
 - Favor small, reversible edits and keep verification close to the change.
