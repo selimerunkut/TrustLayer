@@ -269,7 +269,7 @@ def _fetch_wallet_panel(api_base: str) -> tuple[dict | None, dict | None, str | 
                 balance = balance_resp.json()
             else:
                 error = balance_resp.json().get("detail", balance_resp.text)
-            tx_resp = client.get(f"{api_base}/wallet/transactions", params={"limit": 15})
+            tx_resp = client.get(f"{api_base}/wallet/transactions", params={"limit": 3})
             if tx_resp.status_code == 200:
                 transactions = tx_resp.json()
             elif error is None:
@@ -288,7 +288,7 @@ def _load_wallet_panel_cache(api_base: str) -> dict:
     return cache
 
 
-def _render_wallet_transactions(transactions: dict | None, *, limit: int = 8) -> None:
+def _render_wallet_transactions(transactions: dict | None, *, limit: int = 3) -> None:
     txs = (transactions or {}).get("transactions") or []
     if not txs:
         st.caption("No on-chain activity yet.")
@@ -423,7 +423,7 @@ def _render_circle_wallet_panel(api_base: str) -> None:
         if not txs:
             st.caption("No on-chain activity yet.")
         else:
-            _render_wallet_transactions(transactions, limit=15)
+            _render_wallet_transactions(transactions, limit=3)
 
 
 def build_budget_quote_copy(max_budget_usdc: float) -> tuple[str, str]:
