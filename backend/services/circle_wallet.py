@@ -28,6 +28,11 @@ from backend.services.base_sepolia import (
     blockscout_tx_url,
     load_base_sepolia_config,
 )
+from backend.services.blockscout_activity import (
+    BLOCKSCOUT_PROVENANCE,
+    fetch_onchain_wallet_activity,
+    merge_wallet_transactions,
+)
 from backend.services.session_mode import preflight_session_mode
 
 logger = logging.getLogger(__name__)
@@ -395,6 +400,17 @@ def _read_onchain_usdc_balance(env: Mapping[str, str], wallet_address: str) -> f
     return response.usdc_total
 
 
+def _read_onchain_eth_balance(env: Mapping[str, str], wallet_address: str) -> float | None:
+    rpc_url = _rpc_url(env)
+    if not rpc_url or not wallet_address.startswith("0x"):
+        return None
+    w3 = Web3(Web3.HTTPProvider(rpc_url))
+    if not w3.is_connected():
+        return None
+    wei = w3.eth.get_balance(Web3.to_checksum_address(wallet_address))
+    return round(wei / 10**18, 8)
+
+
 def _attach_broker_payer(env: Mapping[str, str], response: WalletBalanceResponse) -> WalletBalanceResponse:
     deployer = _env_address(env, "BASE_SEPOLIA_DEPLOYER_ADDRESS")
     if not deployer.startswith("0x"):
@@ -405,12 +421,18 @@ def _attach_broker_payer(env: Mapping[str, str], response: WalletBalanceResponse
             payer_usdc = _read_onchain_usdc_balance(env, deployer)
         except Exception:
             payer_usdc = None
+        payer_eth = _read_onchain_eth_balance(env, deployer)
+        wallet_eth = _read_onchain_eth_balance(env, response.wallet_id)
     else:
         payer_usdc = MOCK_WALLET_USDC
+        payer_eth = None
+        wallet_eth = None
     return response.model_copy(
         update={
+            "eth_balance": wallet_eth,
             "broker_payer_address": deployer,
             "broker_payer_usdc": payer_usdc,
+            "broker_payer_eth": payer_eth,
         }
     )
 
@@ -533,7 +555,31 @@ def fetch_wallet_transactions(
     current = _env(env)
     if preflight_session_mode(current) != SessionMode.LIVE:
         return _mock_transactions_response(current)
-    return _fetch_live_transactions(current, limit)
+    wallet_id = _wallet_id(current)
+    try:
+        primary = _fetch_live_transactions(current, limit)
+    except CircleWalletError as exc:
+        logger.debug("Primary wallet transaction source unavailable: %s", exc)
+        primary = WalletTransactionsResponse(
+            wallet_id=wallet_id,
+            transactions=[],
+            simulated=False,
+            provenance="",
+        )
+    onchain = fetch_onchain_wallet_activity(limit=limit, env=current)
+    if primary.transactions:
+        merged = merge_wallet_transactions(primary.transactions, onchain, limit=limit)
+    else:
+        merged = onchain[:limit]
+    provenance = primary.provenance
+    if onchain:
+        provenance = f"{primary.provenance}+{BLOCKSCOUT_PROVENANCE}" if primary.provenance else BLOCKSCOUT_PROVENANCE
+    return WalletTransactionsResponse(
+        wallet_id=wallet_id,
+        transactions=merged,
+        simulated=False,
+        provenance=provenance,
+    )
 
 
 def _circle_cli_command(*parts: str) -> list[str]:

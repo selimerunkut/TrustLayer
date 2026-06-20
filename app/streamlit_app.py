@@ -288,14 +288,47 @@ def _load_wallet_panel_cache(api_base: str) -> dict:
     return cache
 
 
+def _render_wallet_transactions(transactions: dict | None, *, limit: int = 8) -> None:
+    txs = (transactions or {}).get("transactions") or []
+    if not txs:
+        st.caption("No on-chain activity yet.")
+        return
+    st.markdown("**Recent on-chain activity**")
+    for tx in txs[:limit]:
+        label = tx.get("operation") or tx.get("transaction_type") or "transfer"
+        amount = tx.get("amount_usdc", 0)
+        state = tx.get("state", "")
+        tx_hash = tx.get("tx_hash", "")
+        when = tx.get("create_date", "")
+        explorer = tx.get("explorer_url") or (blockscout_tx_url(tx_hash) if tx_hash.startswith("0x") else "")
+        amount_bit = f" · {amount:.4f} USDC" if amount else ""
+        line = f"**{label}**{amount_bit} · {state}"
+        if explorer:
+            short = f"{tx_hash[:10]}…{tx_hash[-6:]}" if tx_hash else "view"
+            st.markdown(f"{line} · [{short}]({explorer})")
+        else:
+            st.markdown(line)
+        if when:
+            st.caption(when)
+
+
 def _render_wallet_balance_bar(api_base: str, backend) -> None:
-    """Always-visible USDC balances on the main page."""
+    """Always-visible USDC balances and recent on-chain activity on the main page."""
     cache = _load_wallet_panel_cache(api_base)
     balance = cache.get("balance")
+    transactions = cache.get("transactions")
     error = cache.get("error")
 
     usdc_addr = os.getenv("BASE_SEPOLIA_TEST_USDC_ADDRESS", BASE_SEPOLIA_TEST_USDC_ADDRESS_DEFAULT).strip()
     token_link = blockscout_usdc_token_url(usdc_addr)
+
+    header_cols = st.columns([5, 1])
+    with header_cols[0]:
+        st.markdown("##### Base Sepolia wallet")
+    with header_cols[1]:
+        if st.button("Refresh", key="refresh_wallet_main", use_container_width=True):
+            st.session_state.pop("_wallet_panel_cache", None)
+            st.rerun()
 
     if error and balance is None:
         st.info("Wallet balance unavailable — start the API to see live USDC.")
@@ -306,30 +339,38 @@ def _render_wallet_balance_bar(api_base: str, backend) -> None:
 
     simulated = balance.get("simulated", False)
     mode_label = "demo" if simulated else "live"
-    cols = st.columns(3)
+    cols = st.columns(4)
     with cols[0]:
+        eth = balance.get("eth_balance")
+        help_text = f"Agent wallet on Base Sepolia ({mode_label})"
         st.metric(
-            "Circle wallet",
-            f"{balance.get('usdc_total', 0):.4f} USDC",
-            help=f"Agent wallet on Base Sepolia ({mode_label})",
+            "Circle wallet USDC",
+            f"{balance.get('usdc_total', 0):.4f}",
+            delta=f"{eth:.6f} ETH" if eth is not None else None,
+            help=help_text,
         )
     payer_usdc = balance.get("broker_payer_usdc")
     payer_addr = balance.get("broker_payer_address", "")
+    payer_eth = balance.get("broker_payer_eth")
     with cols[1]:
         if payer_usdc is not None:
             st.metric(
-                "Premium payer",
-                f"{float(payer_usdc):.4f} USDC",
+                "Premium payer USDC",
+                f"{float(payer_usdc):.4f}",
+                delta=f"{payer_eth:.6f} ETH" if payer_eth is not None else None,
                 help="Deployer wallet that pays on-chain premiums",
             )
         else:
-            st.metric("Premium payer", "—", help="Deployer USDC balance unavailable")
+            st.metric("Premium payer USDC", "—", help="Deployer USDC balance unavailable")
     with cols[2]:
         st.metric(
             "Demo ledger",
             f"{backend.broker_wallet_usdc:.2f} USDC",
             help="In-memory broker balance for mock research/premium steps",
         )
+    with cols[3]:
+        tx_count = len((transactions or {}).get("transactions") or [])
+        st.metric("On-chain txs", tx_count, help="Token transfers + deployer contract calls")
 
     wallet_id = balance.get("wallet_id", "")
     links: list[str] = [f"[USDC token]({token_link})"]
@@ -340,6 +381,7 @@ def _render_wallet_balance_bar(api_base: str, backend) -> None:
     if balance.get("provenance"):
         links.append(f"`{balance['provenance']}`")
     st.caption(" · ".join(links))
+    _render_wallet_transactions(transactions)
 
 
 def _render_circle_wallet_panel(api_base: str) -> None:
@@ -379,24 +421,9 @@ def _render_circle_wallet_panel(api_base: str) -> None:
 
         txs = (transactions or {}).get("transactions") or []
         if not txs:
-            st.caption("No Circle CLI transactions yet.")
-            return
-
-        st.markdown("**Recent transactions**")
-        for tx in txs:
-            label = tx.get("operation") or tx.get("transaction_type") or "transfer"
-            amount = tx.get("amount_usdc", 0)
-            state = tx.get("state", "")
-            tx_hash = tx.get("tx_hash", "")
-            explorer = tx.get("explorer_url") or (blockscout_tx_url(tx_hash) if tx_hash.startswith("0x") else "")
-            line = f"**{label}** · {amount:.4f} USDC · {state}"
-            if explorer:
-                short = f"{tx_hash[:10]}…{tx_hash[-6:]}" if tx_hash else "view"
-                st.markdown(f"{line} · [{short}]({explorer})")
-            else:
-                st.markdown(line)
-            if tx.get("create_date"):
-                st.caption(tx["create_date"])
+            st.caption("No on-chain activity yet.")
+        else:
+            _render_wallet_transactions(transactions, limit=15)
 
 
 def build_budget_quote_copy(max_budget_usdc: float) -> tuple[str, str]:

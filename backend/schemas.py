@@ -91,8 +91,10 @@ class WalletBalanceResponse(BaseModel):
     balances: list[WalletTokenBalance] = Field(default_factory=list)
     simulated: bool = False
     provenance: str = ""
+    eth_balance: float | None = None
     broker_payer_address: str = ""
     broker_payer_usdc: float | None = None
+    broker_payer_eth: float | None = None
 
 
 class WalletTransactionItem(BaseModel):
