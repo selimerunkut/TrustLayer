@@ -3,6 +3,23 @@ from typing import Mapping
 
 from backend.schemas import OracleResolution, PolicyRecord
 
+# Circle / Base Sepolia test USDC (see Blockscout token page).
+BASE_SEPOLIA_TEST_USDC_ADDRESS_DEFAULT = "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+BASE_SEPOLIA_BLOCKSCOUT_BASE = "https://base-sepolia.blockscout.com"
+
+
+def blockscout_tx_url(tx_hash: str) -> str:
+    return f"{BASE_SEPOLIA_BLOCKSCOUT_BASE}/tx/{tx_hash}"
+
+
+def blockscout_address_url(address: str) -> str:
+    return f"{BASE_SEPOLIA_BLOCKSCOUT_BASE}/address/{address}"
+
+
+def blockscout_usdc_token_url(address: str | None = None) -> str:
+    token = address or BASE_SEPOLIA_TEST_USDC_ADDRESS_DEFAULT
+    return blockscout_address_url(token)
+
 
 @dataclass(frozen=True)
 class BaseSepoliaConfig:
