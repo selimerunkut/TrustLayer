@@ -59,6 +59,15 @@ def _betty_internal_api_base() -> str:
     return os.getenv("BETTY_INTERNAL_API_BASE", _betty_public_api_base()).rstrip("/")
 
 
+def _trustlayer_api_token() -> str:
+    return os.getenv("TRUSTLAYER_API_TOKEN", "").strip()
+
+
+def _trustlayer_internal_headers() -> dict[str, str]:
+    token = _trustlayer_api_token()
+    return {"X-TrustLayer-Token": token} if token else {}
+
+
 def _sync_voice_ui_transcript() -> None:
     """Pull voice turns recorded by the iframe API into this session's chat_lines."""
     tid = st.session_state.thread_id
@@ -68,7 +77,11 @@ def _sync_voice_ui_transcript() -> None:
     merged = int(st.session_state.get("voice_ui_merged_count", 0))
     base = _betty_internal_api_base()
     try:
-        r = httpx.get(f"{base}/api/betty/voice-ui-transcript/{tid}", timeout=3.0)
+        r = httpx.get(
+            f"{base}/api/betty/voice-ui-transcript/{tid}",
+            headers=_trustlayer_internal_headers(),
+            timeout=3.0,
+        )
         if r.status_code != 200:
             return
         turns = r.json().get("turns") or []
@@ -264,12 +277,17 @@ def _fetch_wallet_panel(api_base: str) -> tuple[dict | None, dict | None, str | 
     error: str | None = None
     try:
         with httpx.Client(timeout=8.0) as client:
-            balance_resp = client.get(f"{api_base}/wallet/balance")
+            headers = _trustlayer_internal_headers()
+            balance_resp = client.get(f"{api_base}/wallet/balance", headers=headers)
             if balance_resp.status_code == 200:
                 balance = balance_resp.json()
             else:
                 error = balance_resp.json().get("detail", balance_resp.text)
-            tx_resp = client.get(f"{api_base}/wallet/transactions", params={"limit": 15})
+            tx_resp = client.get(
+                f"{api_base}/wallet/transactions",
+                params={"limit": 15},
+                headers=headers,
+            )
             if tx_resp.status_code == 200:
                 transactions = tx_resp.json()
             elif error is None:

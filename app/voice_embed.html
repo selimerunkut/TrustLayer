@@ -109,6 +109,30 @@
       }
     }
 
+    function speakWithBrowserTts(text) {
+      if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        utterance.onstart = () => setStatus("<strong>Betty</strong> is speaking…");
+        utterance.onend = () => {
+          if (!sessionBusy && !pttActive) {
+            setStatus("<strong>Hold to speak</strong> — press during Betty&rsquo;s reply to stop her instantly.");
+          }
+        };
+        utterance.onerror = () => {
+          setErr("Browser speech synthesis failed.");
+        };
+        window.speechSynthesis.speak(utterance);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
     function interruptTurn() {
       stopPlaybackOnly();
       if (turnAbort) {
@@ -199,6 +223,9 @@
         if (ac.signal.aborted) return;
         if (!tr.ok) {
           const err = await tr.json().catch(() => ({}));
+          if (speakWithBrowserTts(reply)) {
+            return;
+          }
           throw new Error(detailMessage(err));
         }
         const blob = await tr.blob();

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 import os
+import time
+import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -14,9 +16,11 @@ try:
 except ImportError:
     pass
 
-from fastapi import APIRouter, FastAPI, HTTPException, Request
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
+
+from backend.services.internal_auth import require_trustlayer_token
 
 from coverpilot_conversation.chat_llm import llm_credentials_configured
 
@@ -25,6 +29,91 @@ logger = logging.getLogger(__name__)
 _MAX_SESSIONS = 80
 _MAX_UI_THREADS = 120
 _MAX_UI_TURNS_PER_THREAD = 400
+_MAX_VOICE_REQUEST_BYTES = 64 * 1024
+_VOICE_RATE_LIMIT_PER_MINUTE = 30
+_VOICE_RATE_LIMIT_BURST = 10
+
+
+class VoiceRequestBodyLimitMiddleware:
+    def __init__(self, app: Any, *, max_bytes: int = _MAX_VOICE_REQUEST_BYTES) -> None:
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
+        if scope["type"] != "http" or not scope.get("path", "").startswith("/api/betty/"):
+            await self.app(scope, receive, send)
+            return
+
+        headers = {key.decode("latin-1"): value.decode("latin-1") for key, value in scope.get("headers", [])}
+        method = scope.get("method", "").upper()
+
+        if method == "POST":
+            source = (
+                headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
+                or headers.get("x-real-ip", "").strip()
+                or (scope.get("client") or ("unknown", 0))[0]
+                or "unknown"
+            )
+            app = scope["app"]
+            state = _voice_rate_limit_state(app)
+            now = time.monotonic()
+            lock = state["lock"]
+            async with lock:
+                bucket = state["buckets"].get(source)
+                if bucket is None:
+                    tokens = float(_VOICE_RATE_LIMIT_BURST)
+                    last_seen = now
+                else:
+                    tokens, last_seen = bucket
+                    refill = (now - last_seen) * (_VOICE_RATE_LIMIT_PER_MINUTE / 60.0)
+                    tokens = min(float(_VOICE_RATE_LIMIT_BURST), tokens + refill)
+                if tokens < 1.0:
+                    response = JSONResponse(status_code=429, content={"detail": "Too many requests."})
+                    await response(scope, receive, send)
+                    return
+                state["buckets"][source] = (tokens - 1.0, now)
+
+        content_length = headers.get("content-length")
+        if content_length and content_length.isdigit() and int(content_length) > self.max_bytes:
+            response = JSONResponse(status_code=413, content={"detail": "Request body too large."})
+            await response(scope, receive, send)
+            return
+
+        body = bytearray()
+        more_body = True
+        while more_body:
+            message = await receive()
+            if message["type"] != "http.request":
+                await self.app(scope, receive, send)
+                return
+            chunk = message.get("body", b"")
+            if chunk:
+                body.extend(chunk)
+                if len(body) > self.max_bytes:
+                    response = JSONResponse(status_code=413, content={"detail": "Request body too large."})
+                    await response(scope, receive, send)
+                    return
+            more_body = bool(message.get("more_body", False))
+
+        consumed = False
+
+        async def replay_receive() -> dict[str, Any]:
+            nonlocal consumed
+            if consumed:
+                return {"type": "http.request", "body": b"", "more_body": False}
+            consumed = True
+            return {"type": "http.request", "body": bytes(body), "more_body": False}
+
+        await self.app(scope, replay_receive, send)
+
+
+def _voice_rate_limit_state(app: Any) -> dict[str, Any]:
+    if not hasattr(app.state, "voice_rate_limit_state"):
+        app.state.voice_rate_limit_state = {
+            "buckets": {},
+            "lock": asyncio.Lock(),
+        }
+    return app.state.voice_rate_limit_state
 
 
 class BettyVoiceChatRequest(BaseModel):
@@ -76,7 +165,9 @@ def _get_or_create_session(app: FastAPI, thread_id: str) -> tuple[Any, Any]:
 
 
 def register_betty_voice_routes(app: FastAPI) -> None:
+    app.add_middleware(VoiceRequestBodyLimitMiddleware)
     router = APIRouter(tags=["betty-voice"])
+    internal_router = APIRouter(dependencies=[Depends(require_trustlayer_token)], tags=["betty-voice"])
 
     @router.post("/api/betty/voice-chat")
     def betty_voice_chat(request: Request, body: BettyVoiceChatRequest) -> dict[str, str]:
@@ -157,9 +248,10 @@ def register_betty_voice_routes(app: FastAPI) -> None:
             store.pop(next(iter(store)))
         return {"ok": "true"}
 
-    @router.get("/api/betty/voice-ui-transcript/{thread_id}")
+    @internal_router.get("/api/betty/voice-ui-transcript/{thread_id}")
     def betty_voice_ui_transcript(request: Request, thread_id: str) -> dict[str, list[dict[str, str]]]:
         store = _voice_ui_transcripts(request.app)
         return {"turns": list(store.get(thread_id, []))}
 
     app.include_router(router)
+    app.include_router(internal_router)

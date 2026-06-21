@@ -1,9 +1,15 @@
 from pathlib import Path
 import json
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
-from app.streamlit_app import build_customer_facing_receipt, build_fallback_banner, build_non_insurance_disclaimer
+from app import streamlit_app
+from app.streamlit_app import (
+    build_customer_facing_receipt,
+    build_fallback_banner,
+    build_non_insurance_disclaimer,
+)
 from backend.agent import DEFAULT_BROKER_MODEL, build_broker
 from backend.main import create_app
 from backend.schemas import (
@@ -37,13 +43,117 @@ from backend.services.session_mode import decide_session_mode, fallback_mode_lab
 from backend.tools import APPROVED_BROKER_TOOL_NAMES, validate_broker_tools
 
 
+class SessionState(dict):
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError as exc:
+            raise AttributeError(name) from exc
+
+    def __setattr__(self, name, value):
+        self[name] = value
+
+
 def test_fastapi_app_boots_and_health_route_exists():
     app = create_app()
     assert app.title == "TrustLayer API"
+    assert app.docs_url == "/docs"
+    assert app.redoc_url == "/redoc"
+    assert app.openapi_url == "/openapi.json"
     paths = [getattr(r, "path", None) for r in app.routes]
     paths = [p for p in paths if isinstance(p, str)]
     assert "/health" in paths
     assert "/version" in paths
+
+
+def test_internal_health_and_version_work_without_a_token():
+    client = TestClient(create_app())
+    assert client.get("/health").json() == {"status": "ok"}
+    assert client.get("/version").json()["git_sha"] == "unknown"
+
+
+def test_unspecified_paths_and_methods_fail_closed():
+    client = TestClient(create_app())
+
+    assert client.get("/nope").status_code == 404
+    assert client.post("/health").status_code == 405
+    assert client.delete("/chat").status_code == 405
+
+
+def test_fastapi_cors_is_restricted_to_browser_posts():
+    app = create_app()
+    cors = next(m for m in app.user_middleware if m.cls.__name__ == "CORSMiddleware")
+    assert cors.kwargs["allow_credentials"] is False
+    assert cors.kwargs["allow_methods"] == ["POST"]
+    assert cors.kwargs["allow_headers"] == ["Content-Type"]
+
+    client = TestClient(app)
+    response = client.options(
+        "/api/betty/voice-chat",
+        headers={
+            "Origin": "http://localhost:8501",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+    assert response.status_code in {200, 204}
+    assert response.headers["access-control-allow-origin"] == "http://localhost:8501"
+
+
+def test_voice_embed_html_injects_public_api_base_and_bootstrap(monkeypatch):
+    monkeypatch.setenv("BETTY_PUBLIC_API_BASE", "https://public.example")
+    monkeypatch.setattr(
+        streamlit_app,
+        "st",
+        SimpleNamespace(
+            session_state=SessionState(
+                thread_id="thread-12345678",
+                crm_customer_id="vasiliy",
+                chat_lines=[("user", "Hello Betty", None), ("assistant", "Hello traveler", None)],
+            ),
+        ),
+    )
+    html = streamlit_app._voice_embed_html()
+    assert "https://public.example" in html
+    assert "thread-12345678" in html
+    assert "Hello Betty" not in html  # bootstrap is base64-encoded
+    assert "__BETTY_API_BASE__" not in html
+    assert "__THREAD_ID__" not in html
+
+
+def test_voice_ui_sync_uses_internal_api_base_and_trustlayer_token(monkeypatch):
+    monkeypatch.setenv("BETTY_INTERNAL_API_BASE", "https://internal.example")
+    monkeypatch.setenv("TRUSTLAYER_API_TOKEN", "service-token")
+    state = SessionState(
+        thread_id="thread-12345678",
+        chat_lines=[],
+        voice_ui_merged_count=0,
+    )
+    monkeypatch.setattr(streamlit_app, "st", SimpleNamespace(session_state=state))
+
+    class FakeResponse:
+        status_code = 200
+
+        @staticmethod
+        def json():
+            return {
+                "turns": [
+                    {"user": "Hello Betty", "assistant": "Hello traveler"},
+                ]
+            }
+
+    def fake_get(url, headers, timeout):
+        assert url == "https://internal.example/api/betty/voice-ui-transcript/thread-12345678"
+        assert headers == {"X-TrustLayer-Token": "service-token"}
+        assert timeout == 3.0
+        return FakeResponse()
+
+    monkeypatch.setattr(streamlit_app.httpx, "get", fake_get)
+
+    streamlit_app._sync_voice_ui_transcript()
+
+    assert state.chat_lines == [("user", "Hello Betty", None), ("assistant", "Hello traveler", None)]
+    assert state.voice_ui_merged_count == 1
 
 
 def test_customer_facing_receipt_hides_pool_selection_and_crypto_details():
@@ -155,6 +265,8 @@ def test_uv_python_version_and_toml_dependency_contract():
     assert "CIRCLE_READY=false" in env_example
     assert "BASE_SEPOLIA_READY=false" in env_example
     assert "ORACLE_PRIVILEGED_TOKEN=" in env_example
+    assert "BETTY_PUBLIC_API_BASE=http://127.0.0.1:8000" in env_example
+    assert "BETTY_INTERNAL_API_BASE=http://trustlayer-api:8000" in env_example
     pyproject = Path("pyproject.toml").read_text()
     assert "fastapi" in pyproject
     assert "streamlit" in pyproject
@@ -170,7 +282,12 @@ def test_uv_python_version_and_toml_dependency_contract():
     workflow = Path(".github/workflows/deploy-main.yml").read_text()
     assert "Coolify deployment" in workflow
     assert "COOLIFY_RESOURCE_UUID" in workflow
-    assert "TRUSTLAYER_API_URL" in workflow
+    assert "TRUSTLAYER_WEB_URL" in workflow
+    assert "TRUSTLAYER_API_URL" not in workflow
+    readme = Path("README.md").read_text()
+    assert "single public origin for the user-facing app" in readme
+    assert "BETTY_PUBLIC_API_BASE" in readme
+    assert "BETTY_INTERNAL_API_BASE" in readme
 
 
 def test_manual_evidence_bundle_template_exposes_required_live_fields():
@@ -264,15 +381,16 @@ def test_shared_models_cover_the_fixed_stack_contract():
     ).budget_authorization_key == "abc"
 
 
-def test_fastapi_routes_cover_the_planned_boundary(monkeypatch):
+def test_fastapi_routes_cover_the_planned_boundary(monkeypatch, oracle_privileged_headers):
     client = TestClient(create_app())
     assert client.get("/health").json() == {"status": "ok"}
     assert client.get("/version").json()["git_sha"] == "unknown"
     cors = client.options(
-        "/health",
+        "/chat",
         headers={
             "Origin": "http://127.0.0.1:8501",
-            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
         },
     )
     assert cors.status_code == 200
@@ -374,10 +492,9 @@ def test_fastapi_routes_cover_the_planned_boundary(monkeypatch):
         },
     ).json()["policy_id"] == "p-2"
     assert client.app.state.chain_write_store["reject:p-2"].tx_hash == "reject:p-2"
-    monkeypatch.setenv("ORACLE_PRIVILEGED_TOKEN", "oracle-token")
     oracle = client.post(
         "/oracle/resolve",
-        headers={"X-Oracle-Token": "oracle-token"},
+        headers=oracle_privileged_headers,
         json={
             "policy_id": "p-1",
             "flight_hash": "hash",
@@ -391,7 +508,14 @@ def test_fastapi_routes_cover_the_planned_boundary(monkeypatch):
     assert client.app.state.chain_write_store["oracle:p-1"].provenance == "mock:oracle"
 
 
-def test_oracle_route_requires_a_privileged_token(monkeypatch):
+def test_version_prefers_trustlayer_git_sha_over_source_commit(monkeypatch):
+    monkeypatch.setenv("TRUSTLAYER_GIT_SHA", "deadbeef")
+    monkeypatch.setenv("SOURCE_COMMIT", "cafebabe")
+    client = TestClient(create_app())
+    assert client.get("/version").json() == {"git_sha": "deadbeef"}
+
+
+def test_oracle_route_requires_a_privileged_token(oracle_privileged_headers):
     client = TestClient(create_app())
     response = client.post(
         "/oracle/resolve",
@@ -407,11 +531,10 @@ def test_oracle_route_requires_a_privileged_token(monkeypatch):
     assert response.status_code == 403
     assert response.json()["detail"] == "oracle route is privileged"
 
-    monkeypatch.setenv("ORACLE_PRIVILEGED_TOKEN", "oracle-token")
     privileged_client = TestClient(create_app())
     allowed = privileged_client.post(
         "/oracle/resolve",
-        headers={"X-Oracle-Token": "oracle-token"},
+        headers=oracle_privileged_headers,
         json={
             "policy_id": "p-1",
             "flight_hash": "hash",
@@ -466,6 +589,7 @@ def test_streamlit_app_shows_budget_and_fee_before_authorization():
     assert "circle wallet" in source
     assert "blockscout" in source
     assert "premium payer" in source
+    assert "x-trustlayer-token" in source
 
 
 def test_solidity_contract_scaffold_exists():
