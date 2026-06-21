@@ -11,6 +11,10 @@ notes. The repository is being shaped around a fixed stack:
 - Base Sepolia / test-USDC contract flow
 - Solidity contract layer
 
+## System overview
+
+![TrustLayer architecture diagram](trustAIdiagram.png)
+
 ## Toolchain
 
 - Use `uv` for Python version and environment management.
