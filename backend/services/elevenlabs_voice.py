@@ -23,7 +23,7 @@ _MAX_TTS_CHARS = 4_000
 
 
 def elevenlabs_configured() -> bool:
-    return bool(os.getenv("ELEVENLABS_API_KEY", "").strip())
+    return bool(os.getenv("ELEVENLABS_API_KEY", "").strip() and os.getenv("ELEVENLABS_VOICE_ID", "").strip())
 
 
 def _tts_model_id() -> str:

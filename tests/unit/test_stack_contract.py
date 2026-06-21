@@ -267,6 +267,7 @@ def test_uv_python_version_and_toml_dependency_contract():
     assert "ORACLE_PRIVILEGED_TOKEN=" in env_example
     assert "BETTY_PUBLIC_API_BASE=http://127.0.0.1:8000" in env_example
     assert "BETTY_INTERNAL_API_BASE=http://trustlayer-api:8000" in env_example
+    assert "TRUSTLAYER_API_TOKEN=" in env_example
     pyproject = Path("pyproject.toml").read_text()
     assert "fastapi" in pyproject
     assert "streamlit" in pyproject
@@ -279,15 +280,26 @@ def test_uv_python_version_and_toml_dependency_contract():
     assert "trustlayer-api" in compose
     assert "trustlayer-web" in compose
     assert "SOURCE_COMMIT" in compose
+    assert "TRUSTLAYER_API_TOKEN" in compose
     workflow = Path(".github/workflows/deploy-main.yml").read_text()
     assert "Coolify deployment" in workflow
     assert "COOLIFY_RESOURCE_UUID" in workflow
     assert "TRUSTLAYER_WEB_URL" in workflow
+    assert "trustlayer-api.37-27-94-136.sslip.io" in workflow
+    assert "/api/betty/voice-ui-transcript/test-thread" in workflow
+    assert "/mode/preflight" in workflow
+    assert "/openapi.json" in workflow
     assert "TRUSTLAYER_API_URL" not in workflow
     readme = Path("README.md").read_text()
     assert "single public origin for the user-facing app" in readme
     assert "BETTY_PUBLIC_API_BASE" in readme
     assert "BETTY_INTERNAL_API_BASE" in readme
+    assert "TRUSTLAYER_API_TOKEN" in readme
+    runbook = Path("tests/manual/trustlayer-runbook-contract.md").read_text()
+    assert "TRUSTLAYER_API_TOKEN" in runbook
+    assert "must share the same `TRUSTLAYER_API_TOKEN`" in runbook
+    assert "browser voice path no longer has a local browser-speech fallback" in runbook
+    assert "/api/betty/tts` returns `503`" in runbook
 
 
 def test_manual_evidence_bundle_template_exposes_required_live_fields():

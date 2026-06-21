@@ -20,6 +20,7 @@ def test_voice_embed_template_exists():
     assert "/api/betty/voice-chat" in text
     assert "/api/betty/tts" in text
     assert "/api/betty/voice-ui-turn" in text
+    assert "speakWithBrowserTts" not in text
 
 
 def test_voice_chat_returns_503_without_llm_keys(monkeypatch):
@@ -111,6 +112,36 @@ def test_tts_route_remains_available_when_elevenlabs_is_configured(monkeypatch, 
     assert r.status_code == 200
     assert r.headers["content-type"] == "audio/mpeg"
     assert r.content.startswith(b"mp3-bytes-are-long-enough-for-test")
+
+
+def test_tts_route_returns_503_without_elevenlabs(monkeypatch, trustlayer_internal_headers):
+    monkeypatch.setenv("TRUSTLAYER_API_TOKEN", "trustlayer-token")
+    monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
+    monkeypatch.delenv("ELEVENLABS_VOICE_ID", raising=False)
+
+    r = TestClient(create_app()).post(
+        "/api/betty/tts",
+        headers=trustlayer_internal_headers,
+        json={"text": "Hello Betty"},
+    )
+
+    assert r.status_code == 503
+    assert r.json()["detail"] == "ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID not set."
+
+
+def test_tts_route_returns_503_when_voice_id_is_missing(monkeypatch, trustlayer_internal_headers):
+    monkeypatch.setenv("TRUSTLAYER_API_TOKEN", "trustlayer-token")
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
+    monkeypatch.delenv("ELEVENLABS_VOICE_ID", raising=False)
+
+    r = TestClient(create_app()).post(
+        "/api/betty/tts",
+        headers=trustlayer_internal_headers,
+        json={"text": "Hello Betty"},
+    )
+
+    assert r.status_code == 503
+    assert r.json()["detail"] == "ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID not set."
 
 
 def test_browser_voice_posts_keep_working_after_one_time_bootstrap(monkeypatch):
