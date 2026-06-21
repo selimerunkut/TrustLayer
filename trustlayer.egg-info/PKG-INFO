@@ -86,9 +86,10 @@ Deployment facts:
 - Coolify API token for deploy automation lives in `/opt/infra/.env` as
   `COOLIFY_API_KEY`
 - The reachable demo hostnames use `sslip.io`
-- The frontend should use the public API base
-  `https://trustlayer-api.37-27-94-136.sslip.io`
-- The Streamlit server should use an internal API base inside Compose
+- The frontend should use the public web origin
+  `https://trustlayer.37-27-94-136.sslip.io`
+- The Streamlit server should use the internal Compose API base
+  `http://trustlayer-api:8000`
 - GitHub pushes to `main` are intended to trigger
   `.github/workflows/deploy-main.yml`, which calls Coolify's deploy endpoint for
   the TrustLayer resource UUID

@@ -290,22 +290,22 @@ def test_ensure_broker_payer_usdc_transfers_shortfall(monkeypatch):
     assert transfer.call_args.kwargs["amount_usdc"] == 1.0
 
 
-def test_wallet_routes_return_mock_payload(monkeypatch):
+def test_wallet_routes_return_mock_payload(monkeypatch, trustlayer_internal_headers):
     monkeypatch.setenv("CIRCLE_READY", "false")
     client = TestClient(create_app())
 
-    balance = client.get("/wallet/balance")
+    balance = client.get("/wallet/balance", headers=trustlayer_internal_headers)
     assert balance.status_code == 200
     body = balance.json()
     assert body["simulated"] is True
     assert body["usdc_total"] == MOCK_WALLET_USDC
 
-    transactions = client.get("/wallet/transactions")
+    transactions = client.get("/wallet/transactions", headers=trustlayer_internal_headers)
     assert transactions.status_code == 200
     assert len(transactions.json()["transactions"]) == 1
 
 
-def test_wallet_balance_route_returns_503_on_live_failure(monkeypatch):
+def test_wallet_balance_route_returns_503_on_live_failure(monkeypatch, trustlayer_internal_headers):
     for key, value in {
         **AGENT_WALLET_ENV,
         "CIRCLE_WALLET_ID": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
@@ -316,7 +316,7 @@ def test_wallet_balance_route_returns_503_on_live_failure(monkeypatch):
 
     with patch("backend.main.fetch_wallet_balance", side_effect=CircleWalletError("Circle balance request failed")):
         client = TestClient(create_app())
-        response = client.get("/wallet/balance")
+        response = client.get("/wallet/balance", headers=trustlayer_internal_headers)
 
     assert response.status_code == 503
     assert response.json()["detail"] == "Circle balance request failed"

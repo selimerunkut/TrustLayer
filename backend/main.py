@@ -1,12 +1,14 @@
 import logging
+import hmac
 import json
 import os
 from collections.abc import MutableMapping
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.betty_voice_routes import register_betty_voice_routes
+from backend.services.internal_auth import require_trustlayer_token
 
 from backend.schemas import (
     BudgetAuthorization,
@@ -78,6 +80,10 @@ def _oracle_privileged_token() -> str:
     return os.environ.get("ORACLE_PRIVILEGED_TOKEN", "").strip()
 
 
+def _token_matches(provided: str | None, expected: str) -> bool:
+    return bool(expected) and hmac.compare_digest((provided or "").strip(), expected)
+
+
 def _fingerprint_policy(policy: PolicyRecord) -> str:
     return json.dumps(policy.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
 
@@ -130,11 +136,13 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_cors_origins(),
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_credentials=False,
+        allow_methods=["POST"],
+        allow_headers=["Content-Type"],
     )
     register_betty_voice_routes(app)
+
+    internal_router = APIRouter(dependencies=[Depends(require_trustlayer_token)])
 
     @app.get("/health")
     def health() -> dict[str, str]:
@@ -157,14 +165,14 @@ def create_app() -> FastAPI:
             "fallback_mode": fallback_mode_label(session_mode),
         }
 
-    @app.get("/wallet/balance", response_model=WalletBalanceResponse)
+    @internal_router.get("/wallet/balance", response_model=WalletBalanceResponse)
     def wallet_balance() -> WalletBalanceResponse:
         try:
             return fetch_wallet_balance()
         except CircleWalletError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-    @app.get("/wallet/transactions", response_model=WalletTransactionsResponse)
+    @internal_router.get("/wallet/transactions", response_model=WalletTransactionsResponse)
     def wallet_transactions(limit: int = 25) -> WalletTransactionsResponse:
         try:
             return fetch_wallet_transactions(limit=limit)
@@ -270,7 +278,7 @@ def create_app() -> FastAPI:
         x_oracle_token: str | None = Header(default=None, alias="X-Oracle-Token"),
     ) -> OracleResolution:
         expected_token = _oracle_privileged_token()
-        if not expected_token or x_oracle_token != expected_token:
+        if not _token_matches(x_oracle_token, expected_token):
             raise HTTPException(status_code=403, detail="oracle route is privileged")
 
         resolved = resolution
@@ -290,6 +298,7 @@ def create_app() -> FastAPI:
         )
         return resolved
 
+    app.include_router(internal_router)
     return app
 
 
