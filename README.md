@@ -48,6 +48,7 @@ Useful runtime variables:
 - `ORACLE_PRIVILEGED_TOKEN`
 - `BETTY_PUBLIC_API_BASE`
 - `BETTY_INTERNAL_API_BASE`
+- `TRUSTLAYER_API_TOKEN`
 - `TRUSTLAYER_GIT_SHA`
 - `TRUSTLAYER_CORS_ORIGINS`
 
@@ -69,10 +70,14 @@ Deployment facts:
 - The reachable demo hostnames use `sslip.io`
 - The single public origin for the user-facing app is
   `https://trustlayer.37-27-94-136.sslip.io`
+- GitHub deployment checks `GET /health` and `GET /version` on the public web
+  origin, then checks Streamlit health on the same host
 - The Streamlit server talks to the API on the internal Compose network via
   `http://trustlayer-api:8000`
-- `BETTY_PUBLIC_API_BASE` is the browser-facing API origin, and
+- `BETTY_PUBLIC_API_BASE` is the browser-facing public origin, and
   `BETTY_INTERNAL_API_BASE` is the Streamlit-side internal API base
+- `TRUSTLAYER_API_TOKEN` must be shared by the FastAPI and Streamlit containers
+  for internal request authentication
 - GitHub pushes to `main` are intended to trigger
   `.github/workflows/deploy-main.yml`, which calls Coolify's deploy endpoint for
   the TrustLayer resource UUID

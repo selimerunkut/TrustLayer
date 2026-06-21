@@ -18,6 +18,7 @@ services:
       - "8000"
     environment:
       BETTY_INTERNAL_API_BASE: http://trustlayer-api:8000
+      TRUSTLAYER_API_TOKEN: ${TRUSTLAYER_API_TOKEN}
       TRUSTLAYER_CORS_ORIGINS: http://127.0.0.1:8501,http://localhost:8501
     expose:
       - "8000"
@@ -45,6 +46,7 @@ services:
     environment:
       BETTY_INTERNAL_API_BASE: http://trustlayer-api:8000
       BETTY_PUBLIC_API_BASE: https://trustlayer.37-27-94-136.sslip.io
+      TRUSTLAYER_API_TOKEN: ${TRUSTLAYER_API_TOKEN}
     expose:
       - "8501"
     depends_on:
