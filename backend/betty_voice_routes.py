@@ -225,13 +225,20 @@ def register_betty_voice_routes(app: FastAPI) -> None:
     @router.post("/api/betty/tts")
     def betty_tts(body: BettyTtsRequest) -> Response:
         try:
-            from backend.services.elevenlabs_voice import elevenlabs_configured, synthesize_speech_mp3
+            from backend.services.elevenlabs_voice import (
+                ElevenLabsTTSHTTPError,
+                elevenlabs_configured,
+                synthesize_speech_mp3,
+            )
         except ImportError as e:
             raise HTTPException(status_code=500, detail="ElevenLabs module not available.") from e
         if not elevenlabs_configured():
             raise HTTPException(status_code=503, detail="ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID not set.")
         try:
             mp3 = synthesize_speech_mp3(body.text)
+        except ElevenLabsTTSHTTPError as e:
+            logger.warning("ElevenLabs TTS rejected the configured voice (%s)", e.status_code)
+            raise HTTPException(status_code=e.status_code, detail=e.detail) from e
         except Exception as e:
             logger.exception("TTS failed")
             raise HTTPException(status_code=500, detail=str(e)) from e

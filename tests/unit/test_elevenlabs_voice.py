@@ -1,8 +1,10 @@
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
 from backend.services.elevenlabs_voice import (
+    ElevenLabsTTSHTTPError,
     simplify_text_for_speech,
     synthesize_speech_mp3,
     transcribe_audio_bytes,
@@ -40,6 +42,28 @@ def test_synthesize_speech_mp3_uses_httpx():
         assert "text-to-speech/v" in args[0]
         assert kwargs["json"]["text"] == "Hello there"
         assert kwargs["json"]["voice_settings"]["speed"] == 1.1
+
+
+@patch.dict("os.environ", {"ELEVENLABS_API_KEY": "k", "ELEVENLABS_VOICE_ID": "v"}, clear=False)
+def test_synthesize_speech_mp3_raises_http_error_with_payload():
+    response = httpx.Response(
+        402,
+        request=httpx.Request("POST", "https://api.elevenlabs.io/v1/text-to-speech/v"),
+        content=(
+            b'{"type":"payment_required","code":"paid_plan_required",'
+            b'"message":"Free users cannot use library voices via the API."}'
+        ),
+    )
+
+    with patch("httpx.Client") as client_cls:
+        inst = MagicMock()
+        client_cls.return_value.__enter__.return_value = inst
+        inst.post.return_value = response
+
+        with pytest.raises(ElevenLabsTTSHTTPError) as excinfo:
+            synthesize_speech_mp3("Hello there", api_key="k", voice_id="v")
+        assert excinfo.value.status_code == 402
+        assert excinfo.value.detail["code"] == "paid_plan_required"
 
 
 @patch.dict("os.environ", {"ELEVENLABS_API_KEY": "k"}, clear=False)
