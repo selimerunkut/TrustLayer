@@ -22,7 +22,9 @@ def test_voice_embed_template_exists():
     assert "/api/betty/voice-chat" in text
     assert "/api/betty/tts" in text
     assert "/api/betty/voice-ui-turn" in text
-    assert "speakWithBrowserTts" not in text
+    assert "speakWithBrowserTts" in text
+    assert "speechSynthesis.cancel()" in text
+    assert "speechSynthesis.speak(" in text
 
 
 def test_voice_chat_returns_503_without_llm_keys(monkeypatch):
