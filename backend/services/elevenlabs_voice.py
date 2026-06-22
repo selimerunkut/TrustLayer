@@ -22,6 +22,15 @@ STT_URL = "https://api.elevenlabs.io/v1/speech-to-text"
 _MAX_TTS_CHARS = 4_000
 
 
+class ElevenLabsTTSHTTPError(RuntimeError):
+    """Raised when ElevenLabs rejects a TTS request with an HTTP error."""
+
+    def __init__(self, status_code: int, detail: Any):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(f"ElevenLabs TTS failed ({status_code}): {detail}")
+
+
 def elevenlabs_configured() -> bool:
     return bool(os.getenv("ELEVENLABS_API_KEY", "").strip() and os.getenv("ELEVENLABS_VOICE_ID", "").strip())
 
@@ -108,9 +117,15 @@ def synthesize_speech_mp3(
     try:
         r.raise_for_status()
     except httpx.HTTPStatusError as e:
-        detail = (r.text or "")[:500]
+        detail: Any = (r.text or "")[:500]
+        try:
+            payload = r.json()
+        except json.JSONDecodeError:
+            payload = None
+        if isinstance(payload, dict):
+            detail = payload
         logger.warning("ElevenLabs TTS HTTP %s: %s", r.status_code, detail)
-        raise RuntimeError(f"ElevenLabs TTS failed ({r.status_code}): {detail}") from e
+        raise ElevenLabsTTSHTTPError(r.status_code, detail) from e
 
     data = r.content
     if not data or len(data) < 100:

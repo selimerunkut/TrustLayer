@@ -156,6 +156,7 @@
       sessionBusy = true;
       speechBuffer = "";
       let succeeded = false;
+      let postTurnStatus = "";
 
       setStatus("<strong>Betty</strong> is thinking…");
 
@@ -200,7 +201,13 @@
         if (ac.signal.aborted) return;
         if (!tr.ok) {
           const err = await tr.json().catch(() => ({}));
-          throw new Error(detailMessage(err));
+          const message = detailMessage(err);
+          if (tr.status === 402 || String(message).includes("paid_plan_required")) {
+            console.warn("ElevenLabs voice playback skipped:", message);
+            postTurnStatus = "<strong>Betty</strong> replied, but voice playback needs a paid ElevenLabs plan or a custom voice.";
+            return;
+          }
+          throw new Error(message);
         }
         const blob = await tr.blob();
         if (ac.signal.aborted) return;
@@ -237,7 +244,7 @@
         sessionBusy = false;
         if (succeeded) setErr("");
         if (!pttActive) {
-          setStatus("<strong>Hold to speak</strong> — press during Betty&rsquo;s reply to stop her instantly.");
+          setStatus(postTurnStatus || "<strong>Hold to speak</strong> — press during Betty&rsquo;s reply to stop her instantly.");
         }
       }
     }

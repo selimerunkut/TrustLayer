@@ -1,10 +1,12 @@
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessage
 
 from backend.main import app, create_app
+from backend.services.elevenlabs_voice import ElevenLabsTTSHTTPError
 from coverpilot_conversation.mock_backend import MockBrokerBackend
 
 client = TestClient(app)
@@ -144,7 +146,29 @@ def test_tts_route_returns_503_when_voice_id_is_missing(monkeypatch, trustlayer_
     assert r.json()["detail"] == "ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID not set."
 
 
+def test_voice_tts_returns_402_for_paid_plan_required(monkeypatch):
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "k")
+    monkeypatch.setenv("ELEVENLABS_VOICE_ID", "v")
+
+    with patch(
+        "backend.services.elevenlabs_voice.synthesize_speech_mp3",
+        side_effect=ElevenLabsTTSHTTPError(
+            402,
+            {
+                "type": "payment_required",
+                "code": "paid_plan_required",
+                "message": "Free users cannot use library voices via the API.",
+            },
+        ),
+    ):
+        r = client.post("/api/betty/tts", json={"text": "Hello Betty"})
+    assert r.status_code == 402
+    assert r.json()["detail"]["code"] == "paid_plan_required"
+
+
 def test_browser_voice_posts_keep_working_after_one_time_bootstrap(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai")
+
     class FakeAgent:
         def __init__(self) -> None:
             self.calls: list[tuple[dict[str, object], dict[str, object]]] = []
