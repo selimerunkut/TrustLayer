@@ -109,8 +109,33 @@
       }
     }
 
+    function stopBrowserSpeech() {
+      if ("speechSynthesis" in window) {
+        try { window.speechSynthesis.cancel(); } catch (e) {}
+      }
+    }
+
+    function speakWithBrowserTts(text) {
+      if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+        return Promise.reject(new Error("Browser speech synthesis is not available."));
+      }
+
+      stopBrowserSpeech();
+      const utterance = new SpeechSynthesisUtterance(text);
+      return new Promise((resolve, reject) => {
+        utterance.onend = () => resolve();
+        utterance.onerror = () => reject(new Error("browser speech error"));
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }
+
     function interruptTurn() {
       stopPlaybackOnly();
+      stopBrowserSpeech();
       if (turnAbort) {
         try { turnAbort.abort(); } catch (e) {}
         turnAbort = null;
@@ -202,9 +227,16 @@
         if (!tr.ok) {
           const err = await tr.json().catch(() => ({}));
           const message = detailMessage(err);
-          if (tr.status === 402 || String(message).includes("paid_plan_required")) {
-            console.warn("ElevenLabs voice playback skipped:", message);
-            postTurnStatus = "<strong>Betty</strong> replied, but voice playback needs a paid ElevenLabs plan or a custom voice.";
+          if (
+            tr.status === 402 ||
+            String(message).includes("paid_plan_required") ||
+            String(message).includes("quota_exceeded")
+          ) {
+            console.warn("ElevenLabs voice playback skipped; falling back to browser speech:", message);
+            setStatus("<strong>Betty</strong> is speaking…");
+            await speakWithBrowserTts(reply);
+            postTurnStatus = "<strong>Betty</strong> replied using browser speech because ElevenLabs ran out of credits.";
+            succeeded = true;
             return;
           }
           throw new Error(message);
