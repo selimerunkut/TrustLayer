@@ -26,6 +26,79 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Sync commit SHA into Coolify env
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          api_base = os.environ["COOLIFY_API_BASE"].rstrip("/")
+          token = os.environ["COOLIFY_TOKEN"].strip()
+          resource_uuid = os.environ["COOLIFY_RESOURCE_UUID"].strip()
+          expected_sha = os.environ["SOURCE_COMMIT"].strip()
+
+          if not token:
+              raise SystemExit("COOLIFY_TOKEN is required")
+          if not resource_uuid:
+              raise SystemExit("COOLIFY_RESOURCE_UUID is required")
+
+          headers = {
+              "Authorization": f"Bearer {token}",
+              "Content-Type": "application/json",
+          }
+
+          def request(url: str, *, method: str = "GET", body: dict | None = None):
+              data = None
+              if body is not None:
+                  data = json.dumps(body).encode("utf-8")
+              req = urllib.request.Request(url, data=data, method=method, headers=headers)
+              with urllib.request.urlopen(req, timeout=60) as resp:
+                  return resp.status, resp.read().decode("utf-8")
+
+          status, payload = request(f"{api_base}/applications/{resource_uuid}/envs")
+          if status != 200:
+              raise SystemExit(f"Coolify env lookup failed: HTTP {status} {payload}")
+
+          envs = json.loads(payload)
+          source_commit_env = next(
+              (env for env in envs if env.get("key") == "SOURCE_COMMIT" and not env.get("is_preview")),
+              None,
+          )
+          if source_commit_env is None:
+              raise SystemExit("Coolify SOURCE_COMMIT env was not found")
+
+          patch_body = {
+              "key": "SOURCE_COMMIT",
+              "value": expected_sha,
+              "is_runtime": bool(source_commit_env.get("is_runtime")),
+              "is_buildtime": bool(source_commit_env.get("is_buildtime")),
+              "is_literal": bool(source_commit_env.get("is_literal")),
+              "is_multiline": bool(source_commit_env.get("is_multiline")),
+              "is_shown_once": bool(source_commit_env.get("is_shown_once")),
+              "comment": source_commit_env.get("comment"),
+          }
+
+          status, payload = request(
+              f"{api_base}/applications/{resource_uuid}/envs",
+              method="PATCH",
+              body=patch_body,
+          )
+          if status not in (200, 201):
+              raise SystemExit(f"Coolify env sync failed: HTTP {status} {payload}")
+
+          updated = json.loads(payload)
+          if updated.get("real_value") != expected_sha:
+              raise SystemExit(
+                  f"Coolify SOURCE_COMMIT sync failed: {updated.get('real_value')!r} != {expected_sha!r}"
+              )
+
+          print(f"Synced Coolify SOURCE_COMMIT to {expected_sha}.")
+          PY
+
       - name: Trigger Coolify deployment and verify rollout
         shell: bash
         run: |
