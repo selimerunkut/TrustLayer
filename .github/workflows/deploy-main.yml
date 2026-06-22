@@ -234,8 +234,8 @@ jobs:
               status, resp_headers, body = request(url, follow_redirects=False)
               if status in {301, 302, 303, 307, 308}:
                   raise SystemExit(f"{url} is redirecting unexpectedly: HTTP {status} {body}")
-          if status not in {404, 410, 418}:
-              raise SystemExit(f"{url} did not return the expected blocked edge response: HTTP {status} {body}")
+              if status not in {404, 410, 418}:
+                  raise SystemExit(f"{url} did not return the expected blocked edge response: HTTP {status} {body}")
 
           wait_http(f"{web_url}/health")
           wait_http(f"{web_url}/version", expected_sha=expected_sha)
