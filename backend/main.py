@@ -4,18 +4,11 @@ import json
 import os
 from collections.abc import MutableMapping
 
-<<<<<<< HEAD
-from fastapi import FastAPI, Header, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-
-from backend.betty_voice_routes import register_betty_voice_routes
-=======
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.betty_voice_routes import register_betty_voice_routes
 from backend.services.internal_auth import require_trustlayer_token
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
 from backend.schemas import (
     BudgetAuthorization,
@@ -143,13 +136,6 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_cors_origins(),
-<<<<<<< HEAD
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-    register_betty_voice_routes(app)
-=======
         allow_credentials=False,
         allow_methods=["POST"],
         allow_headers=["Content-Type"],
@@ -157,7 +143,6 @@ def create_app() -> FastAPI:
     register_betty_voice_routes(app)
 
     internal_router = APIRouter(dependencies=[Depends(require_trustlayer_token)])
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
     @app.get("/health")
     def health() -> dict[str, str]:
@@ -180,22 +165,14 @@ def create_app() -> FastAPI:
             "fallback_mode": fallback_mode_label(session_mode),
         }
 
-<<<<<<< HEAD
-    @app.get("/wallet/balance", response_model=WalletBalanceResponse)
-=======
     @internal_router.get("/wallet/balance", response_model=WalletBalanceResponse)
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
     def wallet_balance() -> WalletBalanceResponse:
         try:
             return fetch_wallet_balance()
         except CircleWalletError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-<<<<<<< HEAD
-    @app.get("/wallet/transactions", response_model=WalletTransactionsResponse)
-=======
     @internal_router.get("/wallet/transactions", response_model=WalletTransactionsResponse)
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
     def wallet_transactions(limit: int = 25) -> WalletTransactionsResponse:
         try:
             return fetch_wallet_transactions(limit=limit)

@@ -1,16 +1,10 @@
 from unittest.mock import MagicMock, patch
 
-<<<<<<< HEAD
-import pytest
-
-from backend.services.elevenlabs_voice import (
-=======
 import httpx
 import pytest
 
 from backend.services.elevenlabs_voice import (
     ElevenLabsTTSHTTPError,
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
     simplify_text_for_speech,
     synthesize_speech_mp3,
     transcribe_audio_bytes,
@@ -50,8 +44,6 @@ def test_synthesize_speech_mp3_uses_httpx():
         assert kwargs["json"]["voice_settings"]["speed"] == 1.1
 
 
-<<<<<<< HEAD
-=======
 @patch.dict("os.environ", {"ELEVENLABS_API_KEY": "k", "ELEVENLABS_VOICE_ID": "v"}, clear=False)
 def test_synthesize_speech_mp3_raises_http_error_with_payload():
     response = httpx.Response(
@@ -74,7 +66,6 @@ def test_synthesize_speech_mp3_raises_http_error_with_payload():
         assert excinfo.value.detail["code"] == "paid_plan_required"
 
 
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 @patch.dict("os.environ", {"ELEVENLABS_API_KEY": "k"}, clear=False)
 def test_transcribe_parses_text_field():
     mock_resp = MagicMock()

@@ -4,11 +4,8 @@ from __future__ import annotations
 
 import logging
 import os
-<<<<<<< HEAD
-=======
 import time
 import asyncio
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 from pathlib import Path
 from typing import Any
 
@@ -19,19 +16,12 @@ try:
 except ImportError:
     pass
 
-<<<<<<< HEAD
-from fastapi import APIRouter, FastAPI, HTTPException, Request
-from fastapi.responses import Response
-from pydantic import BaseModel, Field
-
-=======
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from backend.services.internal_auth import require_trustlayer_token
 
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 from coverpilot_conversation.chat_llm import llm_credentials_configured
 
 logger = logging.getLogger(__name__)
@@ -39,8 +29,6 @@ logger = logging.getLogger(__name__)
 _MAX_SESSIONS = 80
 _MAX_UI_THREADS = 120
 _MAX_UI_TURNS_PER_THREAD = 400
-<<<<<<< HEAD
-=======
 _MAX_VOICE_REQUEST_BYTES = 64 * 1024
 _VOICE_RATE_LIMIT_PER_MINUTE = 30
 _VOICE_RATE_LIMIT_BURST = 10
@@ -126,17 +114,12 @@ def _voice_rate_limit_state(app: Any) -> dict[str, Any]:
             "lock": asyncio.Lock(),
         }
     return app.state.voice_rate_limit_state
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
 
 class BettyVoiceChatRequest(BaseModel):
     thread_id: str = Field(min_length=8, max_length=128)
     message: str = Field(min_length=1, max_length=16000)
-<<<<<<< HEAD
-    crm_customer_id: str = Field(default="john", max_length=64)
-=======
     crm_customer_id: str = Field(default="vasiliy", max_length=64)
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
     conversation_bootstrap: str | None = Field(
         default=None,
         max_length=8000,
@@ -182,13 +165,9 @@ def _get_or_create_session(app: FastAPI, thread_id: str) -> tuple[Any, Any]:
 
 
 def register_betty_voice_routes(app: FastAPI) -> None:
-<<<<<<< HEAD
-    router = APIRouter(tags=["betty-voice"])
-=======
     app.add_middleware(VoiceRequestBodyLimitMiddleware)
     router = APIRouter(tags=["betty-voice"])
     internal_router = APIRouter(dependencies=[Depends(require_trustlayer_token)], tags=["betty-voice"])
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
     @router.post("/api/betty/voice-chat")
     def betty_voice_chat(request: Request, body: BettyVoiceChatRequest) -> dict[str, str]:
@@ -198,11 +177,7 @@ def register_betty_voice_routes(app: FastAPI) -> None:
                 detail="No LLM API key on the server: set NEBIUS_API_KEY or OPENAI_API_KEY.",
             )
         agent, backend = _get_or_create_session(request.app, body.thread_id)
-<<<<<<< HEAD
-        backend.session_customer_id = (body.crm_customer_id or "john").strip().lower()
-=======
         backend.session_customer_id = (body.crm_customer_id or "vasiliy").strip().lower()
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
         from coverpilot_conversation.customer_directory import (
             session_crm_context_block,
@@ -250,27 +225,20 @@ def register_betty_voice_routes(app: FastAPI) -> None:
     @router.post("/api/betty/tts")
     def betty_tts(body: BettyTtsRequest) -> Response:
         try:
-<<<<<<< HEAD
-            from backend.services.elevenlabs_voice import elevenlabs_configured, synthesize_speech_mp3
-=======
             from backend.services.elevenlabs_voice import (
                 ElevenLabsTTSHTTPError,
                 elevenlabs_configured,
                 synthesize_speech_mp3,
             )
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
         except ImportError as e:
             raise HTTPException(status_code=500, detail="ElevenLabs module not available.") from e
         if not elevenlabs_configured():
             raise HTTPException(status_code=503, detail="ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID not set.")
         try:
             mp3 = synthesize_speech_mp3(body.text)
-<<<<<<< HEAD
-=======
         except ElevenLabsTTSHTTPError as e:
             logger.warning("ElevenLabs TTS rejected the configured voice (%s)", e.status_code)
             raise HTTPException(status_code=e.status_code, detail=e.detail) from e
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
         except Exception as e:
             logger.exception("TTS failed")
             raise HTTPException(status_code=500, detail=str(e)) from e
@@ -287,17 +255,10 @@ def register_betty_voice_routes(app: FastAPI) -> None:
             store.pop(next(iter(store)))
         return {"ok": "true"}
 
-<<<<<<< HEAD
-    @router.get("/api/betty/voice-ui-transcript/{thread_id}")
-=======
     @internal_router.get("/api/betty/voice-ui-transcript/{thread_id}")
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
     def betty_voice_ui_transcript(request: Request, thread_id: str) -> dict[str, list[dict[str, str]]]:
         store = _voice_ui_transcripts(request.app)
         return {"turns": list(store.get(thread_id, []))}
 
     app.include_router(router)
-<<<<<<< HEAD
-=======
     app.include_router(internal_router)
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954

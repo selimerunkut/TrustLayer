@@ -57,18 +57,13 @@ class SessionState(dict):
 def test_fastapi_app_boots_and_health_route_exists():
     app = create_app()
     assert app.title == "TrustLayer API"
-<<<<<<< HEAD
-=======
     assert app.docs_url == "/docs"
     assert app.redoc_url == "/redoc"
     assert app.openapi_url == "/openapi.json"
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
     paths = [getattr(r, "path", None) for r in app.routes]
     paths = [p for p in paths if isinstance(p, str)]
     assert "/health" in paths
     assert "/version" in paths
-<<<<<<< HEAD
-=======
 
 
 def test_internal_health_and_version_work_without_a_token():
@@ -159,7 +154,6 @@ def test_voice_ui_sync_uses_internal_api_base_and_trustlayer_token(monkeypatch):
 
     assert state.chat_lines == [("user", "Hello Betty", None), ("assistant", "Hello traveler", None)]
     assert state.voice_ui_merged_count == 1
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
 
 def test_customer_facing_receipt_hides_pool_selection_and_crypto_details():
@@ -286,12 +280,6 @@ def test_uv_python_version_and_toml_dependency_contract():
     assert "trustlayer-api" in compose
     assert "trustlayer-web" in compose
     assert "SOURCE_COMMIT" in compose
-<<<<<<< HEAD
-    workflow = Path(".github/workflows/deploy-main.yml").read_text()
-    assert "Coolify deployment" in workflow
-    assert "COOLIFY_RESOURCE_UUID" in workflow
-    assert "TRUSTLAYER_API_URL" in workflow
-=======
     assert "TRUSTLAYER_API_TOKEN" in compose
     workflow = Path(".github/workflows/deploy-main.yml").read_text()
     assert "Coolify deployment" in workflow
@@ -312,7 +300,6 @@ def test_uv_python_version_and_toml_dependency_contract():
     assert "must share the same `TRUSTLAYER_API_TOKEN`" in runbook
     assert "browser voice path no longer has a local browser-speech fallback" in runbook
     assert "/api/betty/tts` returns `503`" in runbook
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
 
 def test_manual_evidence_bundle_template_exposes_required_live_fields():
@@ -411,18 +398,11 @@ def test_fastapi_routes_cover_the_planned_boundary(monkeypatch, oracle_privilege
     assert client.get("/health").json() == {"status": "ok"}
     assert client.get("/version").json()["git_sha"] == "unknown"
     cors = client.options(
-<<<<<<< HEAD
-        "/health",
-        headers={
-            "Origin": "http://127.0.0.1:8501",
-            "Access-Control-Request-Method": "GET",
-=======
         "/chat",
         headers={
             "Origin": "http://127.0.0.1:8501",
             "Access-Control-Request-Method": "POST",
             "Access-Control-Request-Headers": "content-type",
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
         },
     )
     assert cors.status_code == 200
@@ -621,10 +601,7 @@ def test_streamlit_app_shows_budget_and_fee_before_authorization():
     assert "circle wallet" in source
     assert "blockscout" in source
     assert "premium payer" in source
-<<<<<<< HEAD
-=======
     assert "x-trustlayer-token" in source
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
 
 def test_solidity_contract_scaffold_exists():

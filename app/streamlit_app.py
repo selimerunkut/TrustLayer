@@ -59,8 +59,6 @@ def _betty_internal_api_base() -> str:
     return os.getenv("BETTY_INTERNAL_API_BASE", _betty_public_api_base()).rstrip("/")
 
 
-<<<<<<< HEAD
-=======
 def _trustlayer_api_token() -> str:
     return os.getenv("TRUSTLAYER_API_TOKEN", "").strip()
 
@@ -70,7 +68,6 @@ def _trustlayer_internal_headers() -> dict[str, str]:
     return {"X-TrustLayer-Token": token} if token else {}
 
 
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 def _sync_voice_ui_transcript() -> None:
     """Pull voice turns recorded by the iframe API into this session's chat_lines."""
     tid = st.session_state.thread_id
@@ -80,15 +77,11 @@ def _sync_voice_ui_transcript() -> None:
     merged = int(st.session_state.get("voice_ui_merged_count", 0))
     base = _betty_internal_api_base()
     try:
-<<<<<<< HEAD
-        r = httpx.get(f"{base}/api/betty/voice-ui-transcript/{tid}", timeout=3.0)
-=======
         r = httpx.get(
             f"{base}/api/betty/voice-ui-transcript/{tid}",
             headers=_trustlayer_internal_headers(),
             timeout=3.0,
         )
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
         if r.status_code != 200:
             return
         turns = r.json().get("turns") or []
@@ -137,11 +130,7 @@ def _chat_bootstrap_for_voice() -> str:
 def _voice_embed_html() -> str:
     path = Path(__file__).resolve().parent / "voice_embed.html"
     raw = path.read_text(encoding="utf-8")
-<<<<<<< HEAD
-    crm = st.session_state.crm_customer_id or "john"
-=======
     crm = st.session_state.crm_customer_id or "vasiliy"
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
     boot = _chat_bootstrap_for_voice()
     boot_b64 = base64.b64encode(boot.encode("utf-8")).decode("ascii") if boot else ""
     return (
@@ -288,25 +277,17 @@ def _fetch_wallet_panel(api_base: str) -> tuple[dict | None, dict | None, str | 
     error: str | None = None
     try:
         with httpx.Client(timeout=8.0) as client:
-<<<<<<< HEAD
-            balance_resp = client.get(f"{api_base}/wallet/balance")
-=======
             headers = _trustlayer_internal_headers()
             balance_resp = client.get(f"{api_base}/wallet/balance", headers=headers)
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
             if balance_resp.status_code == 200:
                 balance = balance_resp.json()
             else:
                 error = balance_resp.json().get("detail", balance_resp.text)
-<<<<<<< HEAD
-            tx_resp = client.get(f"{api_base}/wallet/transactions", params={"limit": 3})
-=======
             tx_resp = client.get(
                 f"{api_base}/wallet/transactions",
                 params={"limit": 15},
                 headers=headers,
             )
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
             if tx_resp.status_code == 200:
                 transactions = tx_resp.json()
             elif error is None:
@@ -325,11 +306,7 @@ def _load_wallet_panel_cache(api_base: str) -> dict:
     return cache
 
 
-<<<<<<< HEAD
-def _render_wallet_transactions(transactions: dict | None, *, limit: int = 3) -> None:
-=======
 def _render_wallet_transactions(transactions: dict | None, *, limit: int = 8) -> None:
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
     txs = (transactions or {}).get("transactions") or []
     if not txs:
         st.caption("No on-chain activity yet.")
@@ -464,11 +441,7 @@ def _render_circle_wallet_panel(api_base: str) -> None:
         if not txs:
             st.caption("No on-chain activity yet.")
         else:
-<<<<<<< HEAD
-            _render_wallet_transactions(transactions, limit=3)
-=======
             _render_wallet_transactions(transactions, limit=15)
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
 
 def build_budget_quote_copy(max_budget_usdc: float) -> tuple[str, str]:
@@ -493,7 +466,7 @@ def build_ui() -> None:
         st.caption("Add `NEBIUS_API_KEY` (preferred) or `OPENAI_API_KEY` to `.env` to enable replies.")
 
     if "crm_customer_id" not in st.session_state:
-        st.session_state.crm_customer_id = "john"
+        st.session_state.crm_customer_id = "vasiliy"
     if "thread_id" not in st.session_state:
         st.session_state.thread_id = str(uuid.uuid4())
     if "agent_bundle" not in st.session_state:
@@ -527,11 +500,7 @@ def build_ui() -> None:
             value=st.session_state.crm_customer_id,
             help='lookup_customer_profile("") uses this id.',
         )
-<<<<<<< HEAD
-        st.session_state.crm_customer_id = (crm or "john").strip().lower()
-=======
         st.session_state.crm_customer_id = (crm or "vasiliy").strip().lower()
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
         backend.session_customer_id = st.session_state.crm_customer_id
         _render_circle_wallet_panel(_betty_internal_api_base())
         with st.expander("Debug", expanded=False):

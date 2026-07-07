@@ -1,11 +1,4 @@
 from pathlib import Path
-<<<<<<< HEAD
-
-import pytest
-from fastapi.testclient import TestClient
-
-from backend.main import app
-=======
 from unittest.mock import patch
 
 import pytest
@@ -15,7 +8,6 @@ from langchain_core.messages import AIMessage
 from backend.main import app, create_app
 from backend.services.elevenlabs_voice import ElevenLabsTTSHTTPError
 from coverpilot_conversation.mock_backend import MockBrokerBackend
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
 client = TestClient(app)
 
@@ -28,14 +20,11 @@ def test_voice_embed_template_exists():
     assert "__THREAD_ID__" in text
     assert "__BOOTSTRAP_B64__" in text
     assert "/api/betty/voice-chat" in text
-<<<<<<< HEAD
-=======
     assert "/api/betty/tts" in text
     assert "/api/betty/voice-ui-turn" in text
     assert "speakWithBrowserTts" in text
     assert "speechSynthesis.cancel()" in text
     assert "speechSynthesis.speak(" in text
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
 
 def test_voice_chat_returns_503_without_llm_keys(monkeypatch):
@@ -46,12 +35,6 @@ def test_voice_chat_returns_503_without_llm_keys(monkeypatch):
         json={
             "thread_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
             "message": "Hello Betty",
-<<<<<<< HEAD
-            "crm_customer_id": "john",
-        },
-    )
-    assert r.status_code == 503
-=======
             "crm_customer_id": "vasiliy",
         },
     )
@@ -230,4 +213,3 @@ def test_browser_voice_posts_keep_working_after_one_time_bootstrap(monkeypatch):
     assert "Prior typed chat this session" in first_payload
     assert "typed chat bootstrap" not in second_payload
     assert "Prior typed chat this session" not in second_payload
->>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
