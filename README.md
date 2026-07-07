@@ -34,6 +34,10 @@ Base Sepolia settlement.
   <a href="https://drive.google.com/drive/folders/1fuvULBAubCbq-NVrDSXnoVH6CeZn0J5F">Hackathon folder</a>
 </p>
 
+## System overview
+
+![TrustLayer architecture diagram](trustAIdiagram.png)
+
 ## Toolchain
 
 - Use `uv` for Python version and environment management.
@@ -67,6 +71,10 @@ Useful runtime variables:
 - `ORACLE_PRIVILEGED_TOKEN`
 - `BETTY_PUBLIC_API_BASE`
 - `BETTY_INTERNAL_API_BASE`
+<<<<<<< HEAD
+=======
+- `TRUSTLAYER_API_TOKEN`
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 - `TRUSTLAYER_GIT_SHA`
 - `TRUSTLAYER_CORS_ORIGINS`
 
@@ -86,12 +94,30 @@ Deployment facts:
 - Coolify API token for deploy automation lives in `/opt/infra/.env` as
   `COOLIFY_API_KEY`
 - The reachable demo hostnames use `sslip.io`
+<<<<<<< HEAD
 - The frontend should use the public API base
   `https://trustlayer-api.37-27-94-136.sslip.io`
 - The Streamlit server should use an internal API base inside Compose
 - GitHub pushes to `main` are intended to trigger
   `.github/workflows/deploy-main.yml`, which calls Coolify's deploy endpoint for
   the TrustLayer resource UUID
+=======
+- The single public origin for the user-facing app is
+  `https://trustlayer.37-27-94-136.sslip.io`
+- GitHub deployment checks `GET /health` and `GET /version` on the public web
+  origin, then checks Streamlit health on the same host
+- The Streamlit server talks to the API on the internal Compose network via
+  `http://trustlayer-api:8000`
+- `BETTY_PUBLIC_API_BASE` is the browser-facing public origin, and
+  `BETTY_INTERNAL_API_BASE` is the Streamlit-side internal API base
+- `TRUSTLAYER_API_TOKEN` must be shared by the FastAPI and Streamlit containers
+  for internal request authentication
+- GitHub pushes to `main` are intended to trigger
+  `.github/workflows/deploy-main.yml`, which calls Coolify's deploy endpoint for
+  the TrustLayer resource UUID. The workflow also syncs Coolify's
+  `SOURCE_COMMIT` env to the pushed SHA before deploy so `/version` can prove
+  the live build matches the commit.
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 - The GitHub deploy key is now in place for the private repo, so Coolify can
   clone `selimerunkut/TrustLayer` without falling back to username/password
   auth.

@@ -43,3 +43,33 @@ def test_oracle_route_is_restricted_and_customer_copy_is_non_crypto_native(monke
     assert "wallet" not in visible
     assert "pool-demo" not in visible
     assert receipt.simulated is True
+
+
+def test_internal_routes_require_a_trustlayer_token(monkeypatch, trustlayer_internal_headers):
+    monkeypatch.setenv("CIRCLE_READY", "false")
+    monkeypatch.delenv("TRUSTLAYER_API_TOKEN", raising=False)
+    client = TestClient(create_app())
+
+    unavailable = client.get("/wallet/balance")
+    assert unavailable.status_code == 503
+    assert unavailable.json()["detail"] == "service unavailable"
+
+    monkeypatch.setenv("TRUSTLAYER_API_TOKEN", "trustlayer-token")
+
+    missing = client.get("/wallet/balance")
+    assert missing.status_code == 401
+    assert missing.json()["detail"] == "unauthorized"
+
+    allowed = client.get("/wallet/balance", headers=trustlayer_internal_headers)
+    assert allowed.status_code == 200
+    assert allowed.json()["simulated"] is True
+
+    transcript_missing = client.get("/api/betty/voice-ui-transcript/thread-1234")
+    assert transcript_missing.status_code == 401
+
+    transcript_allowed = client.get(
+        "/api/betty/voice-ui-transcript/thread-1234",
+        headers=trustlayer_internal_headers,
+    )
+    assert transcript_allowed.status_code == 200
+    assert transcript_allowed.json() == {"turns": []}

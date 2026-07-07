@@ -81,6 +81,12 @@ short, current, and biased toward things future agents are likely to forget.
   should use the deploy-key source path instead of prompting for HTTP auth.
 - Coolify may start with `SOURCE_COMMIT=unknown`; do not reintroduce a hard
   build failure on that value.
+<<<<<<< HEAD
+=======
+- GitHub Actions now patches the Coolify app's `SOURCE_COMMIT` env to the
+  pushed commit SHA before each deploy; keep the `/version` check wired to that
+  commit-synchronization step.
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 - Add TrustLayer deployment notes under `/opt/infra/docs/` when updating the
   infra playbook.
 

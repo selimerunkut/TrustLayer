@@ -152,16 +152,30 @@ def merge_wallet_transactions(
     limit: int,
 ) -> list[WalletTransactionItem]:
     seen: set[str] = set()
+<<<<<<< HEAD
     unique: list[WalletTransactionItem] = []
     for group in groups:
         for item in group:
+=======
+    merged: list[WalletTransactionItem] = []
+    for group in groups:
+        ordered = sorted(group, key=lambda tx: tx.create_date, reverse=True)
+        for item in ordered:
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
             key = item.id or item.tx_hash
             if not key or key in seen:
                 continue
             seen.add(key)
+<<<<<<< HEAD
             unique.append(item)
     unique.sort(key=lambda tx: tx.create_date or "", reverse=True)
     return unique[:limit]
+=======
+            merged.append(item)
+            if len(merged) >= limit:
+                return merged
+    return merged
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
 
 def fetch_onchain_wallet_activity(

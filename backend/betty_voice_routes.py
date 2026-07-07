@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import logging
 import os
+<<<<<<< HEAD
+=======
+import time
+import asyncio
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 from pathlib import Path
 from typing import Any
 
@@ -14,10 +19,19 @@ try:
 except ImportError:
     pass
 
+<<<<<<< HEAD
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+=======
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel, Field
+
+from backend.services.internal_auth import require_trustlayer_token
+
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 from coverpilot_conversation.chat_llm import llm_credentials_configured
 
 logger = logging.getLogger(__name__)
@@ -25,12 +39,104 @@ logger = logging.getLogger(__name__)
 _MAX_SESSIONS = 80
 _MAX_UI_THREADS = 120
 _MAX_UI_TURNS_PER_THREAD = 400
+<<<<<<< HEAD
+=======
+_MAX_VOICE_REQUEST_BYTES = 64 * 1024
+_VOICE_RATE_LIMIT_PER_MINUTE = 30
+_VOICE_RATE_LIMIT_BURST = 10
+
+
+class VoiceRequestBodyLimitMiddleware:
+    def __init__(self, app: Any, *, max_bytes: int = _MAX_VOICE_REQUEST_BYTES) -> None:
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
+        if scope["type"] != "http" or not scope.get("path", "").startswith("/api/betty/"):
+            await self.app(scope, receive, send)
+            return
+
+        headers = {key.decode("latin-1"): value.decode("latin-1") for key, value in scope.get("headers", [])}
+        method = scope.get("method", "").upper()
+
+        if method == "POST":
+            source = (
+                headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
+                or headers.get("x-real-ip", "").strip()
+                or (scope.get("client") or ("unknown", 0))[0]
+                or "unknown"
+            )
+            app = scope["app"]
+            state = _voice_rate_limit_state(app)
+            now = time.monotonic()
+            lock = state["lock"]
+            async with lock:
+                bucket = state["buckets"].get(source)
+                if bucket is None:
+                    tokens = float(_VOICE_RATE_LIMIT_BURST)
+                    last_seen = now
+                else:
+                    tokens, last_seen = bucket
+                    refill = (now - last_seen) * (_VOICE_RATE_LIMIT_PER_MINUTE / 60.0)
+                    tokens = min(float(_VOICE_RATE_LIMIT_BURST), tokens + refill)
+                if tokens < 1.0:
+                    response = JSONResponse(status_code=429, content={"detail": "Too many requests."})
+                    await response(scope, receive, send)
+                    return
+                state["buckets"][source] = (tokens - 1.0, now)
+
+        content_length = headers.get("content-length")
+        if content_length and content_length.isdigit() and int(content_length) > self.max_bytes:
+            response = JSONResponse(status_code=413, content={"detail": "Request body too large."})
+            await response(scope, receive, send)
+            return
+
+        body = bytearray()
+        more_body = True
+        while more_body:
+            message = await receive()
+            if message["type"] != "http.request":
+                await self.app(scope, receive, send)
+                return
+            chunk = message.get("body", b"")
+            if chunk:
+                body.extend(chunk)
+                if len(body) > self.max_bytes:
+                    response = JSONResponse(status_code=413, content={"detail": "Request body too large."})
+                    await response(scope, receive, send)
+                    return
+            more_body = bool(message.get("more_body", False))
+
+        consumed = False
+
+        async def replay_receive() -> dict[str, Any]:
+            nonlocal consumed
+            if consumed:
+                return {"type": "http.request", "body": b"", "more_body": False}
+            consumed = True
+            return {"type": "http.request", "body": bytes(body), "more_body": False}
+
+        await self.app(scope, replay_receive, send)
+
+
+def _voice_rate_limit_state(app: Any) -> dict[str, Any]:
+    if not hasattr(app.state, "voice_rate_limit_state"):
+        app.state.voice_rate_limit_state = {
+            "buckets": {},
+            "lock": asyncio.Lock(),
+        }
+    return app.state.voice_rate_limit_state
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
 
 class BettyVoiceChatRequest(BaseModel):
     thread_id: str = Field(min_length=8, max_length=128)
     message: str = Field(min_length=1, max_length=16000)
+<<<<<<< HEAD
     crm_customer_id: str = Field(default="john", max_length=64)
+=======
+    crm_customer_id: str = Field(default="vasiliy", max_length=64)
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
     conversation_bootstrap: str | None = Field(
         default=None,
         max_length=8000,
@@ -76,7 +182,13 @@ def _get_or_create_session(app: FastAPI, thread_id: str) -> tuple[Any, Any]:
 
 
 def register_betty_voice_routes(app: FastAPI) -> None:
+<<<<<<< HEAD
     router = APIRouter(tags=["betty-voice"])
+=======
+    app.add_middleware(VoiceRequestBodyLimitMiddleware)
+    router = APIRouter(tags=["betty-voice"])
+    internal_router = APIRouter(dependencies=[Depends(require_trustlayer_token)], tags=["betty-voice"])
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
     @router.post("/api/betty/voice-chat")
     def betty_voice_chat(request: Request, body: BettyVoiceChatRequest) -> dict[str, str]:
@@ -86,7 +198,11 @@ def register_betty_voice_routes(app: FastAPI) -> None:
                 detail="No LLM API key on the server: set NEBIUS_API_KEY or OPENAI_API_KEY.",
             )
         agent, backend = _get_or_create_session(request.app, body.thread_id)
+<<<<<<< HEAD
         backend.session_customer_id = (body.crm_customer_id or "john").strip().lower()
+=======
+        backend.session_customer_id = (body.crm_customer_id or "vasiliy").strip().lower()
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
         from coverpilot_conversation.customer_directory import (
             session_crm_context_block,
@@ -134,13 +250,27 @@ def register_betty_voice_routes(app: FastAPI) -> None:
     @router.post("/api/betty/tts")
     def betty_tts(body: BettyTtsRequest) -> Response:
         try:
+<<<<<<< HEAD
             from backend.services.elevenlabs_voice import elevenlabs_configured, synthesize_speech_mp3
+=======
+            from backend.services.elevenlabs_voice import (
+                ElevenLabsTTSHTTPError,
+                elevenlabs_configured,
+                synthesize_speech_mp3,
+            )
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
         except ImportError as e:
             raise HTTPException(status_code=500, detail="ElevenLabs module not available.") from e
         if not elevenlabs_configured():
             raise HTTPException(status_code=503, detail="ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID not set.")
         try:
             mp3 = synthesize_speech_mp3(body.text)
+<<<<<<< HEAD
+=======
+        except ElevenLabsTTSHTTPError as e:
+            logger.warning("ElevenLabs TTS rejected the configured voice (%s)", e.status_code)
+            raise HTTPException(status_code=e.status_code, detail=e.detail) from e
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
         except Exception as e:
             logger.exception("TTS failed")
             raise HTTPException(status_code=500, detail=str(e)) from e
@@ -157,9 +287,17 @@ def register_betty_voice_routes(app: FastAPI) -> None:
             store.pop(next(iter(store)))
         return {"ok": "true"}
 
+<<<<<<< HEAD
     @router.get("/api/betty/voice-ui-transcript/{thread_id}")
+=======
+    @internal_router.get("/api/betty/voice-ui-transcript/{thread_id}")
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
     def betty_voice_ui_transcript(request: Request, thread_id: str) -> dict[str, list[dict[str, str]]]:
         store = _voice_ui_transcripts(request.app)
         return {"turns": list(store.get(thread_id, []))}
 
     app.include_router(router)
+<<<<<<< HEAD
+=======
+    app.include_router(internal_router)
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954

@@ -1,0 +1,31 @@
+{
+  "bundle_type": "voice-demo",
+  "commit_hash": "c140925cf18caf4ccacb7557865d240a0c180e93",
+  "test_summary": "Targeted verification passed with `uv run pytest tests/unit/test_stack_contract.py tests/unit/test_betty_voice_routes.py tests/security/test_privilege_and_redaction.py -q` (`37 passed`). A direct Node check against `app/voice_embed.html` confirmed the browser speech fallback helper cancels prior speech, starts speech synthesis, and restores the idle UI state after completion.",
+  "screenshots": [],
+  "logs": [
+    "POST https://trustlayer.37-27-94-136.sslip.io/api/betty/voice-chat -> contextual assistant reply for a one-day Rome trip prompt",
+    "POST https://trustlayer.37-27-94-136.sslip.io/api/betty/voice-ui-turn -> 200 OK",
+    "POST https://trustlayer.37-27-94-136.sslip.io/api/betty/tts -> 500 invalid_api_key from ElevenLabs in the deployed environment",
+    "Node executable proof against app/voice_embed.html -> speakWithBrowserTts() called speechSynthesis.cancel(), invoked speechSynthesis.speak(), and transitioned status from speaking to idle"
+  ],
+  "policy_ids": [],
+  "idempotency_keys": [],
+  "receipt_references": [],
+  "tx_hashes": [],
+  "contract_address": "",
+  "fallback_mode": true,
+  "demo_transcript": "tests/manual/trustlayer-voice-transcript.md",
+  "base_policy_created": {},
+  "claim_payout_receipt": {},
+  "live_requirements": {
+    "circle_x402_payment": false,
+    "base_sepolia_policy_creation": false,
+    "test_usdc_payout_after_oracle_resolution": false
+  },
+  "notes": [
+    "This bundle records the TrustLayer voice-demo path, not the older live settlement demo in tests/manual/evidence-bundle.json.",
+    "The deployed ElevenLabs API key was invalid, so the frontend now falls back to native browser speech synthesis for audible TTS.",
+    "No live settlement or blockchain receipts are part of this bundle."
+  ]
+}

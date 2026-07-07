@@ -42,8 +42,13 @@ class MockBrokerBackend:
 
     broker_wallet_usdc: float = 10_000.0
     drafts: dict[str, PolicyDraft] = field(default_factory=dict)
+<<<<<<< HEAD
     #: When `lookup_customer_profile` is called with an empty hint, resolve this CRM id (demo: John).
     session_customer_id: str = "john"
+=======
+    #: When `lookup_customer_profile` is called with an empty hint, resolve this CRM id (demo: Vasiliy).
+    session_customer_id: str = "vasiliy"
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
     #: Set true after successful `policy_research` (ideas.md: KB before budget lock).
     policy_research_completed: bool = False
 

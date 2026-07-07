@@ -3,8 +3,7 @@ from fastapi.testclient import TestClient
 from backend.main import create_app
 
 
-def test_api_routes_support_the_core_money_movement_flow(monkeypatch):
-    monkeypatch.setenv("ORACLE_PRIVILEGED_TOKEN", "oracle-token")
+def test_api_routes_support_the_core_money_movement_flow(oracle_privileged_headers):
     client = TestClient(create_app())
 
     auth = client.post(
@@ -90,7 +89,7 @@ def test_api_routes_support_the_core_money_movement_flow(monkeypatch):
 
     resolved = client.post(
         "/oracle/resolve",
-        headers={"X-Oracle-Token": "oracle-token"},
+        headers=oracle_privileged_headers,
         json={
             "policy_id": "p-api",
             "flight_hash": "hash",

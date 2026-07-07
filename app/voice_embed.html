@@ -109,8 +109,38 @@
       }
     }
 
+<<<<<<< HEAD
     function interruptTurn() {
       stopPlaybackOnly();
+=======
+    function stopBrowserSpeech() {
+      if ("speechSynthesis" in window) {
+        try { window.speechSynthesis.cancel(); } catch (e) {}
+      }
+    }
+
+    function speakWithBrowserTts(text) {
+      if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+        return Promise.reject(new Error("Browser speech synthesis is not available."));
+      }
+
+      stopBrowserSpeech();
+      const utterance = new SpeechSynthesisUtterance(text);
+      return new Promise((resolve, reject) => {
+        utterance.onend = () => resolve();
+        utterance.onerror = () => reject(new Error("browser speech error"));
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }
+
+    function interruptTurn() {
+      stopPlaybackOnly();
+      stopBrowserSpeech();
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
       if (turnAbort) {
         try { turnAbort.abort(); } catch (e) {}
         turnAbort = null;
@@ -155,6 +185,11 @@
       turnAbort = ac;
       sessionBusy = true;
       speechBuffer = "";
+<<<<<<< HEAD
+=======
+      let succeeded = false;
+      let postTurnStatus = "";
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
       setStatus("<strong>Betty</strong> is thinking…");
 
@@ -162,7 +197,11 @@
         const body = {
           thread_id: threadId,
           message: t,
+<<<<<<< HEAD
           crm_customer_id: (crmInput.value || "john").trim(),
+=======
+          crm_customer_id: (crmInput.value || "vasiliy").trim(),
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
         };
         if (!bootstrapSent && CHAT_TRANSCRIPT_FOR_VOICE && CHAT_TRANSCRIPT_FOR_VOICE.length > 0) {
           body.conversation_bootstrap = CHAT_TRANSCRIPT_FOR_VOICE;
@@ -199,7 +238,24 @@
         if (ac.signal.aborted) return;
         if (!tr.ok) {
           const err = await tr.json().catch(() => ({}));
+<<<<<<< HEAD
           throw new Error(detailMessage(err));
+=======
+          const message = detailMessage(err);
+          if (
+            tr.status === 402 ||
+            String(message).includes("paid_plan_required") ||
+            String(message).includes("quota_exceeded")
+          ) {
+            console.warn("ElevenLabs voice playback skipped; falling back to browser speech:", message);
+            setStatus("<strong>Betty</strong> is speaking…");
+            await speakWithBrowserTts(reply);
+            postTurnStatus = "<strong>Betty</strong> replied using browser speech because ElevenLabs ran out of credits.";
+            succeeded = true;
+            return;
+          }
+          throw new Error(message);
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
         }
         const blob = await tr.blob();
         if (ac.signal.aborted) return;
@@ -224,6 +280,10 @@
           };
           audio.play().catch(reject);
         });
+<<<<<<< HEAD
+=======
+        succeeded = true;
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
       } catch (e) {
         if (e.name === "AbortError") {
           setErr("");
@@ -233,9 +293,15 @@
       } finally {
         if (turnAbort === ac) turnAbort = null;
         sessionBusy = false;
+<<<<<<< HEAD
         setErr("");
         if (!pttActive) {
           setStatus("<strong>Hold to speak</strong> — press during Betty&rsquo;s reply to stop her instantly.");
+=======
+        if (succeeded) setErr("");
+        if (!pttActive) {
+          setStatus(postTurnStatus || "<strong>Hold to speak</strong> — press during Betty&rsquo;s reply to stop her instantly.");
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
         }
       }
     }

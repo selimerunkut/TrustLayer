@@ -18,7 +18,10 @@ jobs:
     timeout-minutes: 60
     env:
       COOLIFY_API_BASE: http://37.27.94.136:8000/api/v1
+<<<<<<< HEAD
       TRUSTLAYER_API_URL: https://trustlayer-api.37-27-94-136.sslip.io
+=======
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
       TRUSTLAYER_WEB_URL: https://trustlayer.37-27-94-136.sslip.io
       SOURCE_COMMIT: ${{ github.sha }}
       COOLIFY_RESOURCE_UUID: ${{ vars.COOLIFY_RESOURCE_UUID }}
@@ -27,6 +30,82 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+<<<<<<< HEAD
+=======
+      - name: Sync commit SHA into Coolify env
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          api_base = os.environ["COOLIFY_API_BASE"].rstrip("/")
+          token = os.environ["COOLIFY_TOKEN"].strip()
+          resource_uuid = os.environ["COOLIFY_RESOURCE_UUID"].strip()
+          expected_sha = os.environ["SOURCE_COMMIT"].strip()
+
+          if not token:
+              raise SystemExit("COOLIFY_TOKEN is required")
+          if not resource_uuid:
+              raise SystemExit("COOLIFY_RESOURCE_UUID is required")
+
+          headers = {
+              "Authorization": f"Bearer {token}",
+              "Content-Type": "application/json",
+          }
+
+          def request(url: str, *, method: str = "GET", body: dict | None = None):
+              data = None
+              if body is not None:
+                  data = json.dumps(body).encode("utf-8")
+              req = urllib.request.Request(url, data=data, method=method, headers=headers)
+              with urllib.request.urlopen(req, timeout=60) as resp:
+                  return resp.status, resp.read().decode("utf-8")
+
+          status, payload = request(f"{api_base}/applications/{resource_uuid}/envs")
+          if status != 200:
+              raise SystemExit(f"Coolify env lookup failed: HTTP {status} {payload}")
+
+          envs = json.loads(payload)
+          source_commit_env = next(
+              (env for env in envs if env.get("key") == "SOURCE_COMMIT" and not env.get("is_preview")),
+              None,
+          )
+          if source_commit_env is None:
+              raise SystemExit("Coolify SOURCE_COMMIT env was not found")
+
+          patch_body = {
+              "key": "SOURCE_COMMIT",
+              "value": expected_sha,
+              "is_runtime": bool(source_commit_env.get("is_runtime")),
+              "is_buildtime": bool(source_commit_env.get("is_buildtime")),
+              "is_literal": bool(source_commit_env.get("is_literal")),
+              "is_multiline": bool(source_commit_env.get("is_multiline")),
+              "is_shown_once": bool(source_commit_env.get("is_shown_once")),
+              "comment": source_commit_env.get("comment"),
+          }
+
+          status, payload = request(
+              f"{api_base}/applications/{resource_uuid}/envs",
+              method="PATCH",
+              body=patch_body,
+          )
+          if status not in (200, 201):
+              raise SystemExit(f"Coolify env sync failed: HTTP {status} {payload}")
+
+          updated = json.loads(payload)
+          if updated.get("real_value") != expected_sha:
+              raise SystemExit(
+                  f"Coolify SOURCE_COMMIT sync failed: {updated.get('real_value')!r} != {expected_sha!r}"
+              )
+
+          print(f"Synced Coolify SOURCE_COMMIT to {expected_sha}.")
+          PY
+
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
       - name: Trigger Coolify deployment and verify rollout
         shell: bash
         run: |
@@ -44,8 +123,13 @@ jobs:
           token = os.environ["COOLIFY_TOKEN"].strip()
           resource_uuid = os.environ["COOLIFY_RESOURCE_UUID"].strip()
           expected_sha = os.environ["SOURCE_COMMIT"].strip()
+<<<<<<< HEAD
           api_url = os.environ["TRUSTLAYER_API_URL"].rstrip("/")
           web_url = os.environ["TRUSTLAYER_WEB_URL"].rstrip("/")
+=======
+          web_url = os.environ["TRUSTLAYER_WEB_URL"].rstrip("/")
+          legacy_api_url = "https://trustlayer-api.37-27-94-136.sslip.io"
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
           if not token:
               raise SystemExit("COOLIFY_TOKEN is required")
@@ -54,13 +138,31 @@ jobs:
 
           headers = {"Authorization": f"Bearer {token}"}
 
+<<<<<<< HEAD
           def request(url: str, *, method: str = "GET", body: dict | None = None):
+=======
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          no_redirect_opener = urllib.request.build_opener(NoRedirect())
+          default_opener = urllib.request.build_opener()
+
+          def request(
+              url: str,
+              *,
+              method: str = "GET",
+              body: dict | None = None,
+              follow_redirects: bool = True,
+          ):
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
               data = None
               req_headers = dict(headers)
               if body is not None:
                   data = json.dumps(body).encode("utf-8")
                   req_headers["Content-Type"] = "application/json"
               req = urllib.request.Request(url, data=data, method=method, headers=req_headers)
+<<<<<<< HEAD
               with urllib.request.urlopen(req, timeout=60) as resp:
                   payload = resp.read().decode("utf-8")
                   return resp.status, payload
@@ -71,6 +173,23 @@ jobs:
 
           deploy_url = f"{api_base}/deploy?uuid={urllib.parse.quote(resource_uuid)}&force=false"
           status, payload = request(deploy_url)
+=======
+              opener = default_opener if follow_redirects else no_redirect_opener
+              try:
+                  with opener.open(req, timeout=60) as resp:
+                      payload = resp.read().decode("utf-8")
+                      return resp.status, resp.headers, payload
+              except urllib.error.HTTPError as exc:
+                  payload = exc.read().decode("utf-8", errors="replace")
+                  return exc.code, exc.headers, payload
+
+          def get_json(url: str):
+              status, _, payload = request(url)
+              return json.loads(payload)
+
+          deploy_url = f"{api_base}/deploy?uuid={urllib.parse.quote(resource_uuid)}&force=false"
+          status, _, payload = request(deploy_url)
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
           if status not in (200, 201):
               raise SystemExit(f"Coolify deploy failed: HTTP {status} {payload}")
 
@@ -109,6 +228,7 @@ jobs:
               last_error = None
               while time.time() < http_deadline:
                   try:
+<<<<<<< HEAD
                       req = urllib.request.Request(url, headers={"Accept": "application/json,text/plain,*/*"})
                       with urllib.request.urlopen(req, timeout=10) as resp:
                           body = resp.read().decode("utf-8")
@@ -117,14 +237,62 @@ jobs:
                               if data.get("git_sha") != expected_sha:
                                   raise SystemExit(f"{url} reported {data.get('git_sha')!r}, expected {expected_sha!r}")
                           return body
+=======
+                      status, _, body = request(url, follow_redirects=False)
+                      if status >= 400:
+                          raise RuntimeError(f"HTTP {status}")
+                      if expected_sha is not None:
+                          data = json.loads(body)
+                          if data.get("git_sha") != expected_sha:
+                              raise SystemExit(f"{url} reported {data.get('git_sha')!r}, expected {expected_sha!r}")
+                      return body
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
                   except Exception as exc:
                       last_error = exc
                       time.sleep(10)
               raise SystemExit(f"Timed out waiting for {url}: {last_error}")
 
+<<<<<<< HEAD
           wait_http(f"{api_url}/health")
           wait_http(f"{api_url}/version", expected_sha=expected_sha)
           wait_http(f"{web_url}/_stcore/health")
+=======
+          def assert_not_fastapi(url: str, *, method: str = "GET"):
+              status, resp_headers, body = request(url, method=method, follow_redirects=False)
+              content_type = resp_headers.get("Content-Type", "")
+              normalized = body.lower()
+              if status in {301, 302, 303, 307, 308}:
+                  raise SystemExit(f"{url} is redirecting instead of serving the expected edge response: HTTP {status} {body}")
+              if "application/json" in content_type.lower():
+                  raise SystemExit(f"{url} returned JSON where Streamlit or the edge should have handled the request: HTTP {status} {body}")
+              if status < 400:
+                  if (
+                      '"status":"ok"' in normalized
+                      or '"git_sha"' in normalized
+                      or '"openapi"' in normalized
+                      or "swaggeruibundle" in normalized
+                      or 'redoc' in normalized
+                  ):
+                      raise SystemExit(f"{url} is still serving a FastAPI response: HTTP {status} {body}")
+
+          def assert_legacy_host_blocked(url: str):
+              status, resp_headers, body = request(url, follow_redirects=False)
+              if status in {301, 302, 303, 307, 308}:
+                  raise SystemExit(f"{url} is redirecting unexpectedly: HTTP {status} {body}")
+              if status not in {404, 410, 418}:
+                  raise SystemExit(f"{url} did not return the expected blocked edge response: HTTP {status} {body}")
+
+          wait_http(f"{web_url}/health")
+          wait_http(f"{web_url}/version", expected_sha=expected_sha)
+          wait_http(f"{web_url}/_stcore/health")
+          assert_not_fastapi(f"{web_url}/chat")
+          assert_not_fastapi(f"{web_url}/mode/preflight")
+          assert_not_fastapi(f"{web_url}/api/betty/voice-ui-transcript/test-thread")
+          assert_not_fastapi(f"{web_url}/openapi.json")
+          assert_not_fastapi(f"{web_url}/docs")
+          assert_legacy_host_blocked(f"{legacy_api_url}/health")
+          assert_legacy_host_blocked(f"{legacy_api_url}/version")
+>>>>>>> d6cfeb29db42cccf0c084e8256fbed70e9573954
 
           print(f"Coolify deployment {deployment_uuid} reached the deployed state and served {expected_sha}.")
           PY
