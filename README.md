@@ -11,6 +11,29 @@ notes. The repository is being shaped around a fixed stack:
 - Base Sepolia / test-USDC contract flow
 - Solidity contract layer
 
+## Demo
+
+Recorded at the **AI Agents Hackathon 2026** — Betty brokers parametric flight-delay
+insurance end-to-end: policy research, Circle agent-wallet funding, x402 payment, and
+Base Sepolia settlement.
+
+<p align="center">
+  <a href="https://drive.google.com/file/d/1hZnLTYVhoNDMN8V5Dx73VG-akZGUqx0n/view">
+    <img
+      src="https://lh3.googleusercontent.com/d/1hZnLTYVhoNDMN8V5Dx73VG-akZGUqx0n=w1280"
+      alt="TrustLayer hackathon demo — click to play"
+      width="720"
+    />
+  </a>
+</p>
+
+<p align="center">
+  <strong>TrustlayerDemo.mp4</strong><br />
+  <a href="https://drive.google.com/file/d/1hZnLTYVhoNDMN8V5Dx73VG-akZGUqx0n/view">▶ Watch on Google Drive</a>
+  &nbsp;·&nbsp;
+  <a href="https://drive.google.com/drive/folders/1fuvULBAubCbq-NVrDSXnoVH6CeZn0J5F">Hackathon folder</a>
+</p>
+
 ## Toolchain
 
 - Use `uv` for Python version and environment management.
